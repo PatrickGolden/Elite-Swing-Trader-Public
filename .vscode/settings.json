@@ -1,0 +1,21 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.useLibraryCodeForTypes": true,
+
+  "terminal.integrated.defaultProfile.windows": "Swing Trader (venv)",
+  "terminal.integrated.profiles.windows": {
+    "Swing Trader (venv)": {
+      "overrideName": true,
+      "icon": "terminal-powershell",
+      "source": "PowerShell",
+      "args": [
+        "-NoExit",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Set-Location -LiteralPath '${workspaceFolder}'; & (Join-Path '${workspaceFolder}' '.venv/Scripts/Activate.ps1')"
+      ]
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "email_enabled": true,
+  "telegram_enabled": false,
+  "alert_type_enabled": {
+    "ai_signal": false,
+    "technical_signal": false,
+    "stop_loss": true,
+    "take_profit": true,
+    "trailing_stop": true,
+    "insufficient_cash": true,
+    "low_cash": true,
+    "drift": true,
+    "stress_report": true,
+    "sync_balance_failure": true,
+    "buy_filled": true
+  },
+  "email_recipients": [],
+  "alert_type_email": {
+    "ai_signal": true,
+    "technical_signal": false,
+    "stop_loss": true,
+    "take_profit": true,
+    "trailing_stop": true,
+    "insufficient_cash": false,
+    "low_cash": false,
+    "drift": false,
+    "stress_report": false,
+    "sync_balance_failure": false,
+    "buy_filled": true
+  },
+  "alert_type_telegram": {
+    "ai_signal": false,
+    "technical_signal": false,
+    "stop_loss": false,
+    "take_profit": false,
+    "trailing_stop": false,
+    "insufficient_cash": false,
+    "low_cash": false,
+    "drift": false,
+    "stress_report": false,
+    "sync_balance_failure": false,
+    "buy_filled": false
+  }
+}

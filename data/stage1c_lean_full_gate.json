@@ -1,0 +1,144 @@
+{
+  "generated_at": "2026-06-11T15:02:08.456192+00:00",
+  "git_sha": "5b4fb64",
+  "working_tree_dirty": true,
+  "driver": "stage1c_replay.py --lean",
+  "config": {
+    "lean_full": {
+      "LEAN_ENTRY_MODE": 1.0,
+      "LEAN_FIXED_STOP_PCT": 24.0,
+      "LEAN_TAKE_PROFIT_PCT": 150.0,
+      "LEAN_MAX_HOLD_DAYS": 30,
+      "LEAN_ENTRY_MIN_MOM30": 15.0,
+      "RISK_OFF_MA_BAND_PCT": 1.5
+    },
+    "legacy": {
+      "LEAN_ENTRY_MODE": 0.0
+    },
+    "config_hash": "cef48ff0a52bdc0d"
+  },
+  "universe_size": 29,
+  "universe_symbols": [
+    "AAVE",
+    "ADA",
+    "ALGO",
+    "APT",
+    "ARB",
+    "ATOM",
+    "AVAX",
+    "BCH",
+    "BTC",
+    "DOGE",
+    "DOT",
+    "ETC",
+    "ETH",
+    "FET",
+    "FIL",
+    "INJ",
+    "LINK",
+    "LTC",
+    "MATIC",
+    "MKR",
+    "NEAR",
+    "OP",
+    "PEPE",
+    "RNDR",
+    "SHIB",
+    "SOL",
+    "SUI",
+    "UNI",
+    "XLM"
+  ],
+  "universe_caveat": "30 currently-listed Coinbase coins \u2014 SURVIVORSHIP-BIASED; results are an upper bound until the point-in-time rebuild (STRATEGY.md G1)",
+  "wf_split_year": 2023,
+  "round_trip_cost_pct": 0.6599999999999999,
+  "cost_stress_pct": 1.5,
+  "legacy": {
+    "label": "legacy",
+    "all": {
+      "n": 8796,
+      "win_rate_pct": 32.8,
+      "expectancy_pct": -0.927,
+      "profit_factor": 0.85
+    },
+    "train_pre2023": {
+      "n": 4813,
+      "win_rate_pct": 32.0,
+      "expectancy_pct": -1.05,
+      "profit_factor": 0.84
+    },
+    "test_2023plus": {
+      "n": 3983,
+      "win_rate_pct": 33.8,
+      "expectancy_pct": -0.779,
+      "profit_factor": 0.87
+    },
+    "test_2023plus_stress_1p5": {
+      "n": 3983,
+      "win_rate_pct": 33.8,
+      "expectancy_pct": -1.619,
+      "profit_factor": 0.87
+    },
+    "contrarian_in_risk_on": 0
+  },
+  "lean_full": {
+    "label": "lean_full",
+    "all": {
+      "n": 309,
+      "win_rate_pct": 54.7,
+      "expectancy_pct": 12.853,
+      "profit_factor": 2.5
+    },
+    "train_pre2023": {
+      "n": 174,
+      "win_rate_pct": 56.9,
+      "expectancy_pct": 13.922,
+      "profit_factor": 2.71
+    },
+    "test_2023plus": {
+      "n": 135,
+      "win_rate_pct": 51.9,
+      "expectancy_pct": 11.476,
+      "profit_factor": 2.25
+    },
+    "test_2023plus_stress_1p5": {
+      "n": 135,
+      "win_rate_pct": 51.9,
+      "expectancy_pct": 10.636,
+      "profit_factor": 2.25
+    },
+    "contrarian_in_risk_on": 0
+  },
+  "gate": {
+    "verdict": "PASS",
+    "failing": [],
+    "criteria": [
+      {
+        "name": "expectancy_both_halves_pos",
+        "passed": true,
+        "detail": "train 13.922% / test 11.476%"
+      },
+      {
+        "name": "beats_baseline_by_target",
+        "passed": true,
+        "detail": "\u0394E(test) 12.255% vs target \u2265+1.5% (S1b 11.476% \u2212 base -0.779%)"
+      },
+      {
+        "name": "profit_factor_gt_1_3",
+        "passed": true,
+        "detail": "test PF 2.25"
+      },
+      {
+        "name": "contrarian_leak_eliminated",
+        "passed": true,
+        "detail": "0 contrarian-in-risk-on entries"
+      },
+      {
+        "name": "robust_to_1p5_cost",
+        "passed": true,
+        "detail": "test expectancy 10.636% @1.5% round-trip"
+      }
+    ],
+    "delta_e_test": 12.255
+  }
+}

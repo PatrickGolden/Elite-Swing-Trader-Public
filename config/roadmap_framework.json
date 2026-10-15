@@ -1,0 +1,757 @@
+{
+  "version": 2,
+  "evaluation": {
+    "cadence": "weekly",
+    "timezone": "America/New_York",
+    "promote_requires_consecutive_passes": 2,
+    "fail_closed_on_missing_data": true
+  },
+  "milestones": {
+    "min_closed_trades": 100,
+    "min_attr_completeness_pct": 95.0,
+    "min_expectancy_pct_30d": 0.0,
+    "max_drawdown_pct_30d": 12.0
+  },
+  "rollback_triggers": {
+    "expectancy_below_zero_days": 3,
+    "win_rate_drop_pp_wow": 10.0,
+    "trade_count_spike_multiplier": 2.0,
+    "min_attr_completeness_pct": 90.0,
+    "max_dynamic_stop_slippage_to_intended_pct": 2.0,
+    "max_dynamic_stop_reprice_failure_rate_pct": 15.0,
+    "regime_catastrophe_min_trades": 20,
+    "regime_catastrophe_min_wr_pct": 15.0
+  },
+  "rollback_trigger_scope": {
+    "expectancy_below_zero_days": ["high", "medium"],
+    "win_rate_drop_pp_wow": ["high", "medium"],
+    "trade_count_spike_multiplier": ["high", "medium"]
+  },
+  "features": [
+    {
+      "id": "sideways_gate_floor_raise",
+      "name": "SIDEWAYS Regime Gate Floor Raise",
+      "risk_level": "low",
+      "activation_type": "auto_low_risk",
+      "stage": "A1",
+      "priority": 6,
+      "owner": "quant",
+      "prerequisites": {
+        "closed_trades_gte": 30,
+        "attr_completeness_pct_gte": 90.0
+      },
+      "stability_window_weeks": 2,
+      "notes": "SIDEWAYS is 69% of all backtest signals but has 36.1% WR over 2,497 backtest trades, with negative skew (win_avg 14.1%, loss_avg 19.6%). The current EARLY_MOMENTUM_SIDEWAYS_MIN_SCORE=58 band-aid reduces volume but does not address entry quality. This feature raises GATE_SCORE_SIDEWAYS to a higher floor (target: 62→68) and EARLY_MOMENTUM_SIDEWAYS_MIN_SCORE to 64, reducing SIDEWAYS entries until SHAP diagnostics identify which features actually predict wins in SIDEWAYS. Conservative direction (reduces exposure) — safe to auto-apply once A1 diagnostics are live. Sets sideways_gate_floor_raised=true; live_thresholds.json update is a separate manual step once flag is set.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "sideways_gate_floor_raised",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "sideways_gate_floor_raised",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "sideways_momentum_confirmation",
+      "name": "SIDEWAYS Regime Entry Momentum Confirmation",
+      "risk_level": "medium",
+      "activation_type": "requires_approval",
+      "stage": "A1",
+      "priority": 7,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "closed_trades_gte": 30,
+        "attr_completeness_pct_gte": 90.0
+      },
+      "stability_window_weeks": 2,
+      "notes": "SIDEWAYS has negative profit factor at scale (36.1% WR, 2,497 backtest trades, win_avg 14.1% vs loss_avg 19.6%). Adding price_change_7d > 0 as a required pre-condition for SIDEWAYS auto-execution is architecturally identical to the proposed BULL fix (P3.16). Rationale: a positive 7d return confirms the entry is a pullback in a trending move, not a falling knife — which is the exact failure mode driving SIDEWAYS losses. Does not require 100 trades or regression model; the pattern is structural and visible in the existing backtest sample. Approval required because it changes which SIDEWAYS signals execute. On activation, sets sideways_momentum_confirmation_enabled=true; app.py must check this flag before executing SIDEWAYS-regime signals.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "sideways_momentum_confirmation_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "sideways_momentum_confirmation_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "shap_weekly_diagnostics",
+      "name": "SHAP Weekly Diagnostics",
+      "risk_level": "low",
+      "activation_type": "auto_low_risk",
+      "stage": "A1",
+      "priority": 10,
+      "owner": "quant",
+      "prerequisites": {
+        "closed_trades_gte": 30,
+        "attr_completeness_pct_gte": 90.0
+      },
+      "stability_window_weeks": 2,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "shap_weekly_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "shap_weekly_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamic_stop_baseline_profile",
+      "name": "Dynamic Stop Baseline Profile",
+      "risk_level": "low",
+      "activation_type": "auto_low_risk",
+      "stage": "A1",
+      "priority": 15,
+      "owner": "execution",
+      "prerequisites": {
+        "closed_trades_gte": 30,
+        "attr_completeness_pct_gte": 90.0
+      },
+      "stability_window_weeks": 2,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "dynamic_stop_baseline_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "dynamic_stop_baseline_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "vectorbt_weekly_sweeps",
+      "name": "VectorBT Weekly Exit Calibration",
+      "risk_level": "low",
+      "activation_type": "auto_low_risk",
+      "stage": "A2",
+      "priority": 20,
+      "owner": "quant",
+      "prerequisites": {
+        "depends_on_features": [
+          "shap_weekly_diagnostics"
+        ],
+        "closed_trades_gte": 60,
+        "attr_completeness_pct_gte": 95.0,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 2,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "vectorbt_weekly_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "vectorbt_weekly_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "regression_model_training",
+      "name": "Regression Win-Probability Model",
+      "risk_level": "low",
+      "activation_type": "auto_low_risk",
+      "stage": "B",
+      "priority": 28,
+      "owner": "quant",
+      "prerequisites": {
+        "depends_on_features": [
+          "shap_weekly_diagnostics"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0
+      },
+      "stability_window_weeks": 2,
+      "notes": "Trains regression_scorer.py weekly once MIN_TRADES_FOR_REGRESSION (100) is reached. Model augments quant scores; pipeline falls back to additive scoring when model is absent.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "regression_model_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "regression_model_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "optuna_weekly_tuning",
+      "name": "Optuna Weekly Threshold Tuning",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 30,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "depends_on_features": [
+          "vectorbt_weekly_sweeps"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 2,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "optuna_weekly_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "optuna_weekly_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "dynamic_stop_parameter_optimization",
+      "name": "Dynamic Stop Parameter Optimization",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 35,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "depends_on_features": [
+          "dynamic_stop_baseline_profile",
+          "vectorbt_weekly_sweeps"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 2,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "dynamic_stop_optimizer_tuning_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "dynamic_stop_optimizer_tuning_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "experimental_path_gating",
+      "name": "Experimental Path Gating",
+      "risk_level": "low",
+      "activation_type": "auto_low_risk",
+      "stage": "A2",
+      "priority": 22,
+      "owner": "quant",
+      "prerequisites": {
+        "closed_trades_gte": 60,
+        "attr_completeness_pct_gte": 90.0
+      },
+      "stability_window_weeks": 2,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "experimental_path_gating_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "experimental_path_gating_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "veto_accuracy_autotuning",
+      "name": "Veto Accuracy Auto-Tuning",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 40,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "veto_log_entries_gte": 50
+      },
+      "stability_window_weeks": 3,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "veto_accuracy_autotuning_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "veto_accuracy_autotuning_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "missed_opp_auto_relax",
+      "name": "Missed Opportunity Auto-Relax",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 42,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 3,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "missed_opp_auto_relax_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "missed_opp_auto_relax_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "sizing_counterfactual",
+      "name": "Position Sizing Counterfactual",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 45,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 3,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "sizing_counterfactual_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "sizing_counterfactual_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "expanded_optimizer_bounds",
+      "name": "Expanded Optimizer Bounds",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 48,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "depends_on_features": [
+          "optuna_weekly_tuning"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 4,
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "expanded_optimizer_bounds_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "expanded_optimizer_bounds_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "veto_data_integrity_audit",
+      "name": "Veto Data Integrity Audit",
+      "risk_level": "low",
+      "activation_type": "auto_low_risk",
+      "stage": "A2",
+      "priority": 23,
+      "owner": "quant",
+      "prerequisites": {
+        "closed_trades_gte": 60,
+        "veto_log_entries_gte": 30
+      },
+      "stability_window_weeks": 1,
+      "notes": "Apr-2026 missed-opp analysis found veto_log entries with score=0, current_price=null, and perfectly round F&G/netflow values \u00e2\u20ac\u201d possible test-fixture data leaking into production. This audit scans the veto log for synthetic-looking entries (null prices, zero scores, duplicate round thresholds) and reports the proportion of potentially invalid vetoes. If >25% of vetoes appear synthetic, flags for manual review.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "veto_data_integrity_audit_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "veto_data_integrity_audit_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "sideways_path_kill_switch",
+      "name": "SIDEWAYS Path-Level Negative-Expectancy Kill Switch",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "A2",
+      "priority": 24,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "depends_on_features": [
+          "shap_weekly_diagnostics"
+        ],
+        "closed_trades_gte": 60,
+        "attr_completeness_pct_gte": 95.0
+      },
+      "stability_window_weeks": 2,
+      "notes": "SIDEWAYS is 69% of all signals, 36.1% WR, with win_avg 14.1% vs loss_avg 19.6%. SHAP analysis will identify which quant paths (EARLY_MOMENTUM, STRONG_BUY, ULTRA_BUY, etc.) are generating losses in SIDEWAYS. This feature adds per-path kill switches: any SIDEWAYS quant path whose rolling 30-trade expectancy is negative is suspended until manually re-enabled. Requires SHAP diagnostic data to identify which paths to target — SHAP evidence gates this correctly. Changes which SIDEWAYS paths execute, so approval required. On activation, sets sideways_path_kill_enabled=true; roadmap_dispatcher.py weekly analysis computes per-path SIDEWAYS expectancy and writes kill list to data/sideways_path_kill_list.json.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "sideways_path_kill_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "sideways_path_kill_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "cash_deployment_tracking",
+      "name": "Cash Deployment Efficiency Tracking",
+      "risk_level": "low",
+      "activation_type": "auto_low_risk",
+      "stage": "A1",
+      "priority": 12,
+      "owner": "quant",
+      "prerequisites": {
+        "closed_trades_gte": 30,
+        "attr_completeness_pct_gte": 80.0
+      },
+      "stability_window_weeks": 1,
+      "notes": "Apr-2026 analysis found a 7-day gap (Mar 26 - Apr 2) with zero capital deployed. This module tracks consecutive hours with $0 in open positions and computes opportunity cost vs USDC yield. Emits weekly idle-capital metrics for the dashboard without changing execution behavior.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "cash_deployment_tracking_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "cash_deployment_tracking_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "trailing_stop_target_scaling",
+      "name": "Trailing Stop Target-Proportional Scaling",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 50,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "depends_on_features": [
+          "vectorbt_weekly_sweeps"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 3,
+      "notes": "Apr-2026 analysis: ETH exited +7.15% (target 13.2%, HWM 11.9%) and SOL exited +6.8% (target 24.75%, HWM 11.55%) via 3% trailing stop. Both captured <30% of target move. Proposed: scale trail width with target \u00e2\u20ac\u201d trail_pct = max(TRAILING_STOP_TRAIL_PCT, ai_target_pct * 0.25). VectorBT sweep must validate the candidate parameters against historical trades before apply.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "trailing_stop_target_scaling_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "trailing_stop_target_scaling_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "moderate_buy_accumulation",
+      "name": "MODERATE_BUY Consecutive-Signal Auto-Execution",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 52,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "depends_on_features": [
+          "regression_model_training"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 3,
+      "notes": "Apr-2026 analysis: TAO generated 66 MODERATE_BUY signals in a single day during a 62% monthly surge but never auto-executed (only STRONG/ULTRA auto-execute). ZEC had 61, AAVE 39, FET 31. Proposed: if a coin hits MODERATE_BUY on >= N consecutive refresh cycles (default 4), auto-execute at half position size. Regression model must confirm positive expected value before the rule fires.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "moderate_buy_accumulation_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "moderate_buy_accumulation_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "gate_score_relaxation",
+      "name": "Gate Score Relaxation Study",
+      "risk_level": "low",
+      "activation_type": "auto_low_risk",
+      "stage": "B",
+      "priority": 49,
+      "owner": "quant",
+      "prerequisites": {
+        "depends_on_features": [
+          "shap_weekly_diagnostics"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0
+      },
+      "stability_window_weeks": 2,
+      "notes": "Apr-2026 analysis: RENDER (60 HOLDs at $2.04-2.08), NEAR (56 HOLDs at $1.33-1.38), HYPE (30 HOLDs at $38.89-39.61) consistently screen just below the GATE_SCORE_SIDEWAYS=52 threshold and never enter the full quant pipeline. NEAR is historically the #1 regret in backtest_missed (41% 7d outcome from HOLD). This study replays screening log + outcome_7d data to estimate the profit impact of lowering each GATE_SCORE_* by 2-5 points. Read-only analysis; does not modify live_thresholds.json.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "gate_score_relaxation_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "gate_score_relaxation_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "atr_volatile_regime_stops",
+      "name": "ATR-Based Stop Width for Volatile Regime",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 51,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "depends_on_features": [
+          "dynamic_stop_baseline_profile",
+          "vectorbt_weekly_sweeps"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 3,
+      "notes": "Apr-2026 analysis: TRD-00090 SOL entered STRONG_BUY blood_in_the_street in VOLATILE regime (F&G 12) with 1.5% stop \u00e2\u20ac\u201d stopped out in 79 minutes, then re-entered 30 minutes later at nearly the same price. A 1.5% stop in extreme fear / elevated ATR is asking to be whipsawed. Proposed: in VOLATILE regime, set initial stop = max(ai_stop_pct, 1.5 * ATR_pct) to accommodate natural volatility. VectorBT must validate on historical VOLATILE-regime trades.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "atr_volatile_stops_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "atr_volatile_stops_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "bull_momentum_confirmation_veto",
+      "name": "BULL Regime Momentum Confirmation Veto",
+      "risk_level": "medium",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 52,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "depends_on_features": [
+          "shap_weekly_diagnostics"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "bull_instrumented_closed_trades_gte": 20
+      },
+      "stability_window_weeks": 3,
+      "notes": "Apr-2026 analysis: 14.3% WR on 7 live BULL trades. Scoring system is mean-reversion biased (RSI oversold + Bollinger lower band), fires near local rally tops in trending markets. Phase 2 of BULL fix: add post-score veto that requires price_change_7d > 0 AND price_change_24h > -3% for BULL entries (momentum confirmation -- validates entry is a pullback in an uptrend, not a falling knife). Architecturally identical to FUNDING_VETO_BEAR_PCT pattern. Requires 20+ post-instrumentation BULL closed trades for SHAP to validate which features differentiate BULL wins from BULL losses before implementation.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "bull_momentum_veto_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "bull_momentum_veto_enabled",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "bull_regime_scorer",
+      "name": "BULL Regime Momentum Score Components",
+      "risk_level": "high",
+      "activation_type": "requires_approval",
+      "stage": "B",
+      "priority": 53,
+      "owner": "quant_lead",
+      "prerequisites": {
+        "depends_on_features": [
+          "bull_momentum_confirmation_veto",
+          "regression_model_training",
+          "shap_weekly_diagnostics"
+        ],
+        "closed_trades_gte": 100,
+        "attr_completeness_pct_gte": 95.0,
+        "bull_instrumented_closed_trades_gte": 30,
+        "expectancy_pct_30d_gte": 0.0
+      },
+      "stability_window_weeks": 4,
+      "notes": "Apr-2026 analysis: Phase 3 of BULL fix. Add regime-specific momentum sub-scores in scorer.py/quant_signal.py that only contribute in BULL regime: price above 20-day MA, positive 7d trend, decreasing ATR (momentum consolidation, not breakdown). Requires 30+ post-instrumentation BULL trades to validate. Do not implement until Phase 2 (momentum veto) has been live for at least 1 month and SHAP confirms which features predict BULL wins. Changes to scoring math need walk-forward validation via VectorBT before going live.",
+      "actions": {
+        "on_activate": [
+          {
+            "type": "state_flag",
+            "key": "bull_regime_scorer_enabled",
+            "value": true
+          }
+        ],
+        "on_deactivate": [
+          {
+            "type": "state_flag",
+            "key": "bull_regime_scorer_enabled",
+            "value": false
+          }
+        ]
+      }
+    }
+  ]
+}

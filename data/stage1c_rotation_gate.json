@@ -1,0 +1,78 @@
+{
+  "generated_at": "2026-06-11T17:29:47.547827+00:00",
+  "git_sha": "50daa71",
+  "working_tree_dirty": true,
+  "driver": "stage1c_replay.py --rotation",
+  "config": {
+    "rule": "long while close>MA200*(1+band) AND ch30d>0; next-day-close fills",
+    "band_pct": 1.5,
+    "round_trip_cost_pct": 0.6599999999999999
+  },
+  "note": "G8 benchmark: per-EPISODE stats (one episode = weeks-months in market; not comparable 1:1 with per-trade expectancy \u2014 compare capital growth per year)",
+  "assets": {
+    "BTC": {
+      "label": "btc_rotation",
+      "all": {
+        "n": 65,
+        "win_rate_pct": 36.9,
+        "expectancy_pct": 7.216,
+        "profit_factor": 3.62
+      },
+      "train_pre2023": {
+        "n": 31,
+        "win_rate_pct": 35.5,
+        "expectancy_pct": 11.267,
+        "profit_factor": 4.49
+      },
+      "test_2023plus": {
+        "n": 34,
+        "win_rate_pct": 38.2,
+        "expectancy_pct": 3.522,
+        "profit_factor": 2.52
+      },
+      "test_2023plus_stress_1p5": {
+        "n": 34,
+        "win_rate_pct": 38.2,
+        "expectancy_pct": 2.682,
+        "profit_factor": 2.52
+      },
+      "contrarian_in_risk_on": 0,
+      "episodes": 65,
+      "total_net_pct": 469.04,
+      "avg_hold_days": 16.7,
+      "open_at_edge": 0
+    },
+    "ETH": {
+      "label": "eth_rotation",
+      "all": {
+        "n": 57,
+        "win_rate_pct": 50.9,
+        "expectancy_pct": 7.318,
+        "profit_factor": 3.48
+      },
+      "train_pre2023": {
+        "n": 25,
+        "win_rate_pct": 56.0,
+        "expectancy_pct": 13.519,
+        "profit_factor": 5.66
+      },
+      "test_2023plus": {
+        "n": 32,
+        "win_rate_pct": 46.9,
+        "expectancy_pct": 2.473,
+        "profit_factor": 1.83
+      },
+      "test_2023plus_stress_1p5": {
+        "n": 32,
+        "win_rate_pct": 46.9,
+        "expectancy_pct": 1.633,
+        "profit_factor": 1.83
+      },
+      "contrarian_in_risk_on": 0,
+      "episodes": 57,
+      "total_net_pct": 417.1,
+      "avg_hold_days": 18.2,
+      "open_at_edge": 0
+    }
+  }
+}

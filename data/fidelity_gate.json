@@ -1,0 +1,46 @@
+{
+  "generated_at": "2026-09-25T16:18:40.196556+00:00",
+  "gate": "STRATEGY.md 4b fidelity gate (low-frequency candidate)",
+  "candidate": "BTC risk-on rotation",
+  "verdict": "PENDING",
+  "failing": [],
+  "pending": [
+    "F1_complete_round_trip",
+    "F2_price_fidelity",
+    "F3_cost_fidelity",
+    "F6_alerting"
+  ],
+  "checks": [
+    {
+      "name": "F1_complete_round_trip",
+      "passed": null,
+      "detail": "no completed round trip yet \u2014 1 position OPEN and riding"
+    },
+    {
+      "name": "F2_price_fidelity",
+      "passed": null,
+      "detail": "pending \u2014 no closed round trip yet"
+    },
+    {
+      "name": "F3_cost_fidelity",
+      "passed": null,
+      "detail": "pending \u2014 no closed round trip yet"
+    },
+    {
+      "name": "F4_no_config_drift",
+      "passed": true,
+      "detail": "RISK_OFF_MA_BAND_PCT=1.5 (backtested 1.5); MA200 fixed in risk_regime"
+    },
+    {
+      "name": "F5_availability",
+      "passed": true,
+      "detail": "last refresh 0.4h ago (gaps must be attributable in the ops record)"
+    },
+    {
+      "name": "F6_alerting",
+      "passed": null,
+      "detail": "entry alert delivered live 2026-08-20; exit alert proven only in rotation_dryrun.py \u2014 pending a live exit"
+    }
+  ],
+  "note": "Observational. Passing 4b does NOT authorize live trading \u2014 D5 (funding) remains the owner's separate decision, and 3 (edge) is unchanged."
+}

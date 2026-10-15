@@ -1,0 +1,34 @@
+---
+description: When to use project MCP servers (market data, DeFi, docs, GitHub, scrape, Datadog)—call tools; never invent live data
+alwaysApply: true
+---
+
+# MCP (coding and decisions)
+
+Config: **Cursor** [`.cursor/mcp.json`](.cursor/mcp.json) (copy from [`.cursor/mcp.json.example`](.cursor/mcp.json.example); secrets via `${env:…}` or Cursor MCP env UI). Root [`.mcp.json`](.mcp.json) matches for Claude Code and omits **datadog** only (add there if you use Datadog outside Cursor). Tools are **on demand**—invoke when you need data; they are not injected every message.
+
+| Server | Use for |
+| --- | --- |
+| **coingecko** | Spot/market data via hosted CoinGecko MCP (no key for public tier). |
+| **defi-mcp** | On-chain: balances, gas, DEX quotes, token search (`./defi-mcp`). |
+| **context7** | Up-to-date library docs (CCXT, pytest, etc.). |
+| **github** | Issues, PRs, repo file ops. Needs `GITHUB_PERSONAL_ACCESS_TOKEN` in environment (see example). |
+| **firecrawl** | Crawl/scrape pages. Needs `FIRECRAWL_API_KEY` in environment. |
+| **datadog** | Logs, metrics, dashboards (US1 URL in config; change region if needed). OAuth on first use. If the **Cursor Datadog plugin** also registers MCP, **disable one** duplicate. |
+
+**Price data:** CoinGecko MCP and `defi-mcp` can both return prices—pick the tool that matches the task (broad market vs on-chain/EVM).
+
+## Retired / avoid
+
+- **Binance MCP** — geo-blocked here; don’t re-add without confirmed access.
+- **CoinCap** — invalid MCP responses in Cursor; use CoinGecko.
+
+## Rules
+
+1. **Do not invent** live prices, on-chain state, or production metrics—fetch via MCP or say unavailable.
+2. **Read tool schemas** before calling (names vary by server/version).
+3. **No secrets in git** for MCP; use env vars or Cursor’s secret UI. **Rotate** any token that was ever committed or pasted.
+
+## Safety
+
+Does not override trading safety: no edits to protected live configs, no secrets in chat, no treating MCP output as a trade signal without your strategy and checks.

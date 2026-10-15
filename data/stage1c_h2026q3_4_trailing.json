@@ -1,0 +1,87 @@
+{
+  "generated_at": "2026-08-27T11:16:17.777532+00:00",
+  "git_sha": "5bebf88",
+  "working_tree_dirty": true,
+  "trial_id": "H-2026Q3-4",
+  "driver": "stage1c_replay.py --trailing-trial",
+  "config": {
+    "activate_pct": 8.0,
+    "trail_pct": 13.0,
+    "cost_rt_pct": 2.4,
+    "purge_days": 30,
+    "params": "pinned a priori (legacy config), no sweep"
+  },
+  "folds": {
+    "2022": {
+      "incumbent_net_pct": 0.0,
+      "trailing_net_pct": 0.0,
+      "delta_pp": 0.0,
+      "beat": false
+    },
+    "2023": {
+      "incumbent_net_pct": 31.3,
+      "trailing_net_pct": 31.3,
+      "delta_pp": 0.0,
+      "beat": false
+    },
+    "2024": {
+      "incumbent_net_pct": 25.8,
+      "trailing_net_pct": 27.3,
+      "delta_pp": 1.5,
+      "beat": true
+    },
+    "2025": {
+      "incumbent_net_pct": -12.9,
+      "trailing_net_pct": -12.9,
+      "delta_pp": 0.0,
+      "beat": false
+    }
+  },
+  "pooled": {
+    "incumbent": {
+      "net_pct": 31.4,
+      "max_dd_pct": 39.3,
+      "n_episodes": 35,
+      "n_trail_exits": 0
+    },
+    "trailing": {
+      "net_pct": 32.9,
+      "max_dd_pct": 39.3,
+      "n_episodes": 36,
+      "n_trail_exits": 1
+    }
+  },
+  "verdict": "FAIL",
+  "failing": [
+    "a_folds_3_of_4",
+    "d_bootstrap_5pct_beats_incumbent",
+    "e_exceeds_deflated_hurdle"
+  ],
+  "criteria": [
+    {
+      "name": "a_folds_3_of_4",
+      "passed": false,
+      "detail": "1/4 folds beat incumbent"
+    },
+    {
+      "name": "b_pooled_oos_at_measured_cost",
+      "passed": true,
+      "detail": "trailing 32.9% vs incumbent 31.4% @ 2.4% RT"
+    },
+    {
+      "name": "c_drawdown_not_worse",
+      "passed": true,
+      "detail": "maxDD 39.3% vs 39.3%"
+    },
+    {
+      "name": "d_bootstrap_5pct_beats_incumbent",
+      "passed": false,
+      "detail": "boot 5th-pct mean -1.9% vs incumbent mean 1.612%"
+    },
+    {
+      "name": "e_exceeds_deflated_hurdle",
+      "passed": false,
+      "detail": "improvement -0.023pp/episode vs hurdle 5.162pp (N=11 trials)"
+    }
+  ]
+}

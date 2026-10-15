@@ -1,0 +1,47 @@
+---
+description: Rules-based roadmap automation governance and safety policy
+alwaysApply: true
+---
+
+# Roadmap Automation Framework
+
+## Purpose
+
+Keep roadmap evolution deterministic, auditable, and fail-closed as the trading system matures.
+
+## Canonical Sources
+
+- Human strategy source: `docs/LEAN_PROFIT_ROADMAP.md`
+- Machine policy source: `config/roadmap_framework.json`
+- Runtime state: `data/roadmap_state.json`
+- Transition log: `data/roadmap_transitions.jsonl`
+
+## Non-Negotiable Rules
+
+- No high-risk feature may auto-apply.
+- Missing/corrupt milestone inputs must block promotion (hold/blocked only).
+- Any roadmap feature added to the framework must define:
+  - `id`, `risk_level`, `activation_type`
+  - prerequisite milestones
+  - stability window
+  - rollback triggers
+  - activation/deactivation actions
+- Every stage transition must be logged with:
+  - timestamp
+  - old/new state
+  - trigger metrics snapshot
+  - reason
+- Roadmap documentation and machine spec must be updated together in the same change.
+
+## Activation Policy
+
+- Low-risk features: may auto-apply only when prerequisites pass and stability window is satisfied.
+- High-risk features: never auto-apply; create pending approval item with reasons and required evidence.
+- Rollback triggers must demote/disable features immediately.
+
+## Implementation Guidance
+
+- Evaluate roadmap transitions on scheduled cadence (weekly), not intraday.
+- Keep transition execution idempotent (same cycle should not re-apply same action).
+- Use deterministic ordering (stage, then feature priority).
+- Default to explicit `hold`/`blocked` over optimistic promotion when uncertainty exists.

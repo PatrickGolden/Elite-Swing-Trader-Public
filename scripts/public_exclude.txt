@@ -1,0 +1,11 @@
+# Paths kept out of the public mirror (see scripts/publish_public.py).
+#   dir/        everything under that directory
+#   a/b*.md     glob on the full path
+#   name*.md    glob on the file name, any depth
+#
+# Internal agent research notes — include real trade results that disclose account size.
+tasks/
+# Editor/agent planning scratch.
+.cursor/plans/
+# Dated point-in-time audits; superseded by STRATEGY.md and docs/.
+audit_*.md

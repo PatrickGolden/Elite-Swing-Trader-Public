@@ -1,0 +1,46 @@
+name: tests
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      # v6 runs on Node 24+ (avoids Node 20 deprecation on runners)
+      - uses: actions/checkout@v6
+
+      # setup-uv publishes semver tags only (v8.1.0); there is no rolling @v8 ref.
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.11.x"
+
+      - name: Sync environment
+        run: uv sync --all-groups --frozen
+
+      - name: Run tests (exclude stress)
+        run: uv run pytest tests/ -m "not stress" -q --tb=short
+
+      # Parse only the collected count. Do NOT use grep -oP '\d+' on the summary line:
+      # pytest prints "N/M tests collected (...)" and matching every digit breaks
+      # bash integer compare ([ "$count" -lt 636 ]) when count is multiline.
+      - name: Check test count (minimum 636)
+        run: |
+          summary=$(uv run pytest tests/ -m "not stress" --co -q 2>/dev/null | tail -1)
+          count=$(echo "$summary" | sed -n 's/.* \([0-9][0-9]*\)\/[0-9][0-9]* tests collected.*/\1/p')
+          if [ -z "$count" ]; then
+            count=$(echo "$summary" | sed -n 's/.* \([0-9][0-9]*\) tests collected.*/\1/p')
+          fi
+          if [ -z "$count" ]; then
+            echo "::error::Could not parse test count from: $summary"
+            exit 1
+          fi
+          echo "Collected $count tests (non-stress)"
+          if [ "$count" -lt 636 ]; then echo "::error::Test count regression: $count < 636"; exit 1; fi

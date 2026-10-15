@@ -1,0 +1,404 @@
+{
+  "generated_at": "2026-06-11T19:58:58.193596+00:00",
+  "git_sha": "8b2926c",
+  "working_tree_dirty": true,
+  "driver": "stage1c_replay.py --adjudicate",
+  "config": {
+    "lean_7d": {
+      "LEAN_ENTRY_MODE": 1.0,
+      "LEAN_FIXED_STOP_PCT": 24.0,
+      "LEAN_TAKE_PROFIT_PCT": 150.0,
+      "LEAN_MAX_HOLD_DAYS": 7,
+      "LEAN_ENTRY_MIN_MOM30": 15.0,
+      "RISK_OFF_MA_BAND_PCT": 1.5
+    },
+    "config_hash": "41c90fbe47eb2ab8",
+    "measured_rt_cost_pct": 2.4,
+    "stress_rt_cost_pct": 4.8,
+    "episode_mode": true,
+    "max_concurrent": 8,
+    "n_registered_trials": 6
+  },
+  "coverage": {
+    "member_symbols": 273,
+    "with_coinbase_data": 108,
+    "delisted_products_used": 15,
+    "segments": 109,
+    "never_or_no_data_on_coinbase": [
+      "1000SATS",
+      "999",
+      "ABBC",
+      "ACA",
+      "AE",
+      "AION",
+      "AMPL",
+      "AOA",
+      "AR",
+      "ARDR",
+      "ARK",
+      "BAY",
+      "BCC",
+      "BCD",
+      "BCN",
+      "BCZERO",
+      "BDX",
+      "BEAT",
+      "BPS",
+      "BRC",
+      "BSV",
+      "BTCB",
+      "BTCP",
+      "BTG",
+      "BTM",
+      "BTS",
+      "BTT",
+      "CC",
+      "CCXX",
+      "CEL",
+      "CELO",
+      "CENNZ",
+      "CFX",
+      "CNX",
+      "CORE",
+      "DCN",
+      "DCR",
+      "DEXE",
+      "DGB",
+      "DGD",
+      "DNA",
+      "DRGN",
+      "EGT",
+      "EKT",
+      "ELAMA",
+      "ERD",
+      "ETN",
+      "ETP",
+      "EWT",
+      "FCT",
+      "FLG",
+      "FTM",
+      "FTT",
+      "FXC",
+      "FXS",
+      "GAS",
+      "GNT",
+      "GT",
+      "GTN",
+      "H",
+      "HC",
+      "HEDG",
+      "HEX",
+      "HOT",
+      "HYN",
+      "ICX",
+      "INB",
+      "INO",
+      "IOST",
+      "IOTA",
+      "KAS",
+      "KBC",
+      "KCS",
+      "KIN",
+      "KLAY",
+      "KMD",
+      "LAMB",
+      "LEND",
+      "LRG",
+      "LSK",
+      "LUNA",
+      "LUNC",
+      "M",
+      "MEXC",
+      "MIN",
+      "MIOTA",
+      "MNT",
+      "MOAC",
+      "MOBI",
+      "MWC",
+      "MXM",
+      "MYX",
+      "NANO",
+      "NAS",
+      "NEO",
+      "NEXO",
+      "NIGHT",
+      "NOT",
+      "NPXS",
+      "NRG",
+      "OM",
+      "ONE",
+      "ONT",
+      "ORDI",
+      "OSC",
+      "PI",
+      "PLC",
+      "PLF",
+      "PPT",
+      "PZM",
+      "QBIT",
+      "QTUM",
+      "R",
+      "RENBTC",
+      "REV",
+      "RHOC",
+      "RLUSD",
+      "RUNE",
+      "RVN",
+      "SAI",
+      "SC",
+      "SEELE",
+      "SIREN",
+      "SLV",
+      "STEEM",
+      "STRAT",
+      "SXP",
+      "SYS",
+      "TAGZ5",
+      "TEL",
+      "TFUEL",
+      "THETA",
+      "THR",
+      "THX",
+      "TNC",
+      "TRX",
+      "TWT",
+      "U",
+      "USDD",
+      "USDG",
+      "USDN",
+      "VEN",
+      "VERI",
+      "VEST",
+      "VSYS",
+      "WAN",
+      "WAVES",
+      "WTC",
+      "WTRX",
+      "XAUT",
+      "XDC",
+      "XEC",
+      "XEM",
+      "XET",
+      "XIN",
+      "XMR",
+      "XP",
+      "XVG",
+      "ZB",
+      "ZIL",
+      "ZLW"
+    ]
+  },
+  "lean_7d": {
+    "all": {
+      "n": 241,
+      "win_rate_pct": 48.5,
+      "expectancy_pct": 3.355,
+      "profit_factor": 1.7,
+      "stdev_pct": 22.109,
+      "mde_pct": 3.56,
+      "boot5_expectancy_pct": 1.062,
+      "boot5_profit_factor": 1.203,
+      "top3_removed_expectancy_pct": 1.719
+    },
+    "test_modeled_cost": {
+      "n": 91,
+      "win_rate_pct": 47.3,
+      "expectancy_pct": 3.035,
+      "profit_factor": 1.73,
+      "stdev_pct": 18.604,
+      "mde_pct": 4.876,
+      "boot5_expectancy_pct": -0.034,
+      "boot5_profit_factor": 0.993,
+      "top3_removed_expectancy_pct": 0.662
+    },
+    "test_measured_cost": {
+      "n": 91,
+      "win_rate_pct": 47.3,
+      "expectancy_pct": 1.295,
+      "profit_factor": 1.73,
+      "stdev_pct": 18.604,
+      "mde_pct": 4.876,
+      "boot5_expectancy_pct": -1.774,
+      "boot5_profit_factor": 0.7,
+      "top3_removed_expectancy_pct": -1.078
+    },
+    "test_stress_cost": {
+      "n": 91,
+      "win_rate_pct": 47.3,
+      "expectancy_pct": -1.105,
+      "profit_factor": 1.73,
+      "stdev_pct": 18.604,
+      "mde_pct": 4.876,
+      "boot5_expectancy_pct": -4.174,
+      "boot5_profit_factor": 0.448,
+      "top3_removed_expectancy_pct": -3.478
+    },
+    "folds_measured_cost": {
+      "folds": {
+        "2022": {
+          "n": 0,
+          "win_rate_pct": 0.0,
+          "expectancy_pct": 0.0,
+          "profit_factor": 0.0
+        },
+        "2023": {
+          "n": 35,
+          "win_rate_pct": 48.6,
+          "expectancy_pct": 2.374,
+          "profit_factor": 1.75
+        },
+        "2024": {
+          "n": 46,
+          "win_rate_pct": 43.5,
+          "expectancy_pct": 0.725,
+          "profit_factor": 1.66
+        },
+        "2025": {
+          "n": 10,
+          "win_rate_pct": 60.0,
+          "expectancy_pct": 0.142,
+          "profit_factor": 2.61
+        }
+      },
+      "folds_positive": 3,
+      "folds_total": 4,
+      "pooled": {
+        "n": 91,
+        "win_rate_pct": 47.3,
+        "expectancy_pct": 1.295,
+        "profit_factor": 1.73
+      },
+      "passes_3_of_4": true
+    }
+  },
+  "rotation_btc": {
+    "all": {
+      "n": 65,
+      "win_rate_pct": 36.9,
+      "expectancy_pct": 7.216,
+      "profit_factor": 3.62,
+      "stdev_pct": 36.544,
+      "mde_pct": 11.332,
+      "boot5_expectancy_pct": 0.857,
+      "boot5_profit_factor": 1.278,
+      "top3_removed_expectancy_pct": 0.818
+    },
+    "test_measured_cost": {
+      "n": 34,
+      "win_rate_pct": 38.2,
+      "expectancy_pct": 1.782,
+      "profit_factor": 2.52,
+      "stdev_pct": 15.026,
+      "mde_pct": 6.442,
+      "boot5_expectancy_pct": -2.064,
+      "boot5_profit_factor": 0.487,
+      "top3_removed_expectancy_pct": -2.445
+    },
+    "folds_measured_cost": {
+      "folds": {
+        "2022": {
+          "n": 0,
+          "win_rate_pct": 0.0,
+          "expectancy_pct": 0.0,
+          "profit_factor": 0.0
+        },
+        "2023": {
+          "n": 8,
+          "win_rate_pct": 50.0,
+          "expectancy_pct": 7.561,
+          "profit_factor": 6.66
+        },
+        "2024": {
+          "n": 14,
+          "win_rate_pct": 35.7,
+          "expectancy_pct": 1.507,
+          "profit_factor": 2.06
+        },
+        "2025": {
+          "n": 12,
+          "win_rate_pct": 33.3,
+          "expectancy_pct": -1.75,
+          "profit_factor": 0.99
+        }
+      },
+      "folds_positive": 2,
+      "folds_total": 4,
+      "pooled": {
+        "n": 34,
+        "win_rate_pct": 38.2,
+        "expectancy_pct": 1.782,
+        "profit_factor": 2.52
+      },
+      "passes_3_of_4": false
+    }
+  },
+  "per_day_in_market_measured": {
+    "lean_7d": 0.1877,
+    "rotation_btc": 0.1084
+  },
+  "gate": {
+    "verdict": "FAIL",
+    "failing": [
+      "G4_n_episodes_100",
+      "G4_exceeds_mde",
+      "G5_deflated_hurdle",
+      "G6_boot5_expectancy_pos",
+      "G6_boot5_pf_gt_1",
+      "G6_survives_top3_removal",
+      "G2_stress_positive",
+      "G9_edge_clears_cost_plus_2pp"
+    ],
+    "criteria": [
+      {
+        "name": "G4_n_episodes_100",
+        "passed": false,
+        "detail": "episode-level test n=91"
+      },
+      {
+        "name": "G4_exceeds_mde",
+        "passed": false,
+        "detail": "exp 1.295% vs MDE 4.876%"
+      },
+      {
+        "name": "G5_deflated_hurdle",
+        "passed": false,
+        "detail": "exp 1.295% vs hurdle 3.692% (N=6 trials)"
+      },
+      {
+        "name": "G6_boot5_expectancy_pos",
+        "passed": false,
+        "detail": "boot 5th-pct exp -1.774%"
+      },
+      {
+        "name": "G6_boot5_pf_gt_1",
+        "passed": false,
+        "detail": "boot 5th-pct PF 0.7"
+      },
+      {
+        "name": "G6_survives_top3_removal",
+        "passed": false,
+        "detail": "top3-removed exp -1.078%"
+      },
+      {
+        "name": "G3_folds_3_of_4",
+        "passed": true,
+        "detail": "3/4 folds positive at measured cost"
+      },
+      {
+        "name": "G2_stress_positive",
+        "passed": false,
+        "detail": "exp -1.105% @ 4.8% RT stress"
+      },
+      {
+        "name": "G9_edge_clears_cost_plus_2pp",
+        "passed": false,
+        "detail": "net exp at measured cost 1.295% vs required \u22652pp"
+      },
+      {
+        "name": "G8_beats_rotation_per_day",
+        "passed": true,
+        "detail": "lean 0.1877%/day-in-market vs rotation 0.1084%/day (measured cost)"
+      }
+    ]
+  }
+}

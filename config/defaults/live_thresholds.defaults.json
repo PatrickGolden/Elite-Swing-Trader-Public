@@ -1,0 +1,5 @@
+{
+  "_comment": "Minimal live_thresholds.json for disaster recovery. All trading thresholds fall back to DEFAULT_THRESHOLDS in thresholds.py when not present here. Only add overrides as needed.",
+  "updated": null,
+  "updated_by": "disaster_recovery_template"
+}

@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Swing Trader Dashboard</title>
+
+  <!-- Fonts: Fira Sans (UI) + Fira Code (data/numbers) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&family=Fira+Code:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+
+  <!-- External CSS -->
+  <link rel="stylesheet" href="/static/dashboard.css" />
+
+  <!-- Chart.js + Lucide Icons (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+</head>
+
+<body>
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <div class="logo-icon">📈</div>
+        <div class="logo-text">Swing<span>Trader</span></div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="toggle-label" title="Quant-only: Quant score → Rule-based veto → Execute.">Quant+Veto</span>
+      <div class="execution-config" title="Auto-execute entries (TWAP) and exits (stop/target/trailing) via exchange">
+        <label class="toggle-label">Auto-Exec</label>
+        <button class="toggle-btn" id="execution-toggle" onclick="toggleAutoExecution()" disabled title="Loading execution settings…">
+          <span class="toggle-status" id="execution-status">…</span>
+        </button>
+        <select id="execution-exchange" onchange="saveExecutionExchange()" title="Exchange">
+          <option value="coinbase">Coinbase</option>
+          <option value="kraken">Kraken</option>
+        </select>
+      </div>
+      <div class="execution-config" title="Paper trading only; signals auto-logged">
+        <label class="toggle-label">Test Mode</label>
+        <button class="toggle-btn" id="test-mode-toggle" onclick="toggleTestMode()">
+          <span class="toggle-status" id="test-mode-status">On</span>
+        </button>
+      </div>
+      <div class="execution-config" title="Auto-sells positions past the max-hold (21d legacy / 30d in lean mode). Toggle Off to disable when NOT in lean mode; under lean mode the time-exit is a validated part of the strategy and is always enforced.">
+        <label class="toggle-label">Time exit</label>
+        <button class="toggle-btn" id="stale-position-rule-toggle" onclick="toggleStalePositionRule()">
+          <span class="toggle-status" id="stale-position-rule-status">On</span>
+        </button>
+      </div>
+      <div class="header-status-row">
+        <div class="position-monitor-badge" title="Background thread watches open positions every 30s for stop/target/trailing">👁️ Monitor</div>
+        <div class="last-updated" id="last-updated">Loading...</div>
+        <div class="runtime-counter" id="runtime-counter" title="Time since app started">—</div>
+      </div>
+      <button class="refresh-btn" id="refresh-btn" onclick="manualRefresh()">
+        <span class="refresh-icon" id="refresh-icon">↻</span>
+        Refresh Now
+      </button>
+    </div>
+  </header>
+
+  <!-- TEST MODE BANNER (shown when test_mode is true) -->
+  <div class="test-mode-banner hidden" id="test-mode-banner">Test Mode Active — Light API usage enabled (fewer calls, caching)</div>
+
+  <!-- ============================================================
+       DATA SOURCE HEALTH BAR
+       ============================================================ -->
+  <div class="health-bar" onclick="showHealthDetails()" title="Click for detailed diagnostics">
+    <div class="health-summary">
+      <span class="health-icon" id="health-icon">📡</span>
+      <span>Data: <strong id="health-status">Loading...</strong></span>
+    </div>
+    <div class="health-sources" id="health-sources">
+      <!-- Populated by JavaScript -->
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MARKET OVERVIEW BAR (no AI cost tile; no cost basis / fees in account overview)
+       ============================================================ -->
+  <div class="overview-bar" id="overview-bar">
+
+    <!-- Group 1: Portfolio Risk -->
+    <div class="overview-group" id="overview-group-risk">
+      <div class="overview-group-header" onclick="toggleOverviewGroup('risk')">
+        <span class="overview-group-title">Portfolio Risk</span>
+        <i data-lucide="chevron-down" class="overview-group-chevron" id="overview-chevron-risk"></i>
+      </div>
+      <div class="overview-group-cards" id="overview-cards-risk">
+        <div class="overview-card" id="portfolio-risk-card" title="Total Exposure: Sum of your open position sizes as % of account (what you hold). Sub shows correlated exposure and VaR.">
+          <div class="ov-label">Total Exposure</div>
+          <div class="ov-value" id="portfolio-total-risk">—</div>
+          <div class="ov-sub" id="portfolio-correlated-risk">—</div>
+          <div class="ov-sub" id="portfolio-concentration">—</div>
+          <div class="ov-sub" id="portfolio-var">—</div>
+          <div class="ov-sub portfolio-suggestions" id="portfolio-suggestions" style="font-size:10px;color:var(--text-secondary);margin-top:4px;max-height:48px;overflow:auto"></div>
+        </div>
+        <div class="overview-card" id="risk-budget-card" title="Open position capital as % of total cash (same denominator as auto-exec gate). When full, auto-execution skips new BUY signals. Cap scales by account size.">
+          <div class="ov-label">Risk Budget</div>
+          <div class="ov-value" id="risk-budget-value">—</div>
+          <div class="ov-sub" id="risk-budget-bar-wrap" style="margin-top:4px;">
+            <canvas id="risk-budget-bullet" height="24" style="width:100%;"></canvas>
+          </div>
+          <div class="ov-sub" id="risk-budget-detail" style="margin-top:4px;">—</div>
+          <div class="ov-sub" id="risk-budget-status" style="margin-top:2px;font-size:10px;">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group 2: Market Context -->
+    <div class="overview-group" id="overview-group-context">
+      <div class="overview-group-header" onclick="toggleOverviewGroup('context')">
+        <span class="overview-group-title">Market Context</span>
+        <i data-lucide="chevron-down" class="overview-group-chevron" id="overview-chevron-context"></i>
+      </div>
+      <div class="overview-group-cards" id="overview-cards-context">
+        <div class="overview-card" title="Global crypto market cap. 1D/1W/1M show % change. Source: CoinGecko (CoinPaprika fallback).">
+          <div class="ov-label">Total Market Cap</div>
+          <div class="ov-value" id="total-mcap">—</div>
+          <div class="mcap-performance">
+            <div class="mcap-perf-item">
+              <div class="mcap-perf-label">1D</div>
+              <div class="mcap-perf-value" id="mcap-1d">—</div>
+            </div>
+            <div class="mcap-perf-item">
+              <div class="mcap-perf-label">1W</div>
+              <div class="mcap-perf-value" id="mcap-1w">—</div>
+            </div>
+            <div class="mcap-perf-item">
+              <div class="mcap-perf-label">1M</div>
+              <div class="mcap-perf-value" id="mcap-1m">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="overview-card" title="Fear & Greed Index (0–100). Extreme fear = potential buying; extreme greed = caution. Used in scoring.">
+          <div class="ov-label">Fear &amp; Greed</div>
+          <div class="ov-value" id="fg-value">—</div>
+          <div class="ov-sub" id="fg-label">Loading...</div>
+          <div class="ov-sub" id="fg-days" style="font-size:10px;color:var(--text-dim);margin-top:2px"></div>
+        </div>
+        <div class="overview-card" title="Bull/Bear/Sideways/Volatile from price action. Affects position sizing and AI targets.">
+          <div class="ov-label">Market Regime</div>
+          <div class="ov-value" id="regime-value">—</div>
+          <div class="ov-sub" id="regime-confidence">—</div>
+          <div class="ov-sub" id="regime-days" style="font-size:10px;color:var(--text-dim);margin-top:2px"></div>
+          <div class="ov-sub" id="regime-strategy" style="font-size:11px;color:var(--text-secondary);margin-top:4px;"></div>
+        </div>
+        <div class="overview-card" id="onchain-status-card" title="CryptoQuant on-chain metrics: SOPR, exchange netflow, LTH supply. Bullish/bearish/neutral sentiment.">
+          <div class="ov-label">On-Chain</div>
+          <div class="ov-value" id="onchain-status">—</div>
+          <div class="ov-sub" id="onchain-status-sub" style="font-size:10px;color:var(--text-dim)">CryptoQuant</div>
+          <div class="ov-sub" id="onchain-values" style="font-size:10px;color:var(--text-secondary);margin-top:2px"></div>
+        </div>
+        <div class="overview-card" title="Sentiment from news/articles. Positive = bullish; negative = bearish. Article count and source shown.">
+          <div class="ov-label">News Sentiment</div>
+          <div class="ov-value" id="sent-label">—</div>
+          <div class="ov-sub" id="sent-articles">— articles</div>
+          <div class="ov-sub" id="sent-source" style="font-size:10px;color:var(--text-dim);margin-top:2px"></div>
+          <div class="ov-sub" id="sent-days" style="font-size:10px;color:var(--text-dim);margin-top:2px"></div>
+          <a href="/news-sentiment-articles" target="_blank" rel="noopener noreferrer" class="ov-sub" id="sent-articles-link" style="font-size:11px;color:var(--cyan);margin-top:4px;display:inline-block;">View articles</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group 3: Signals & Macro -->
+    <div class="overview-group" id="overview-group-signals">
+      <div class="overview-group-header" onclick="toggleOverviewGroup('signals')">
+        <span class="overview-group-title">Signals &amp; Macro</span>
+        <i data-lucide="chevron-down" class="overview-group-chevron" id="overview-chevron-signals"></i>
+      </div>
+      <div class="overview-group-cards" id="overview-cards-signals">
+        <div class="overview-card" title="Quant tier + rule-based veto; screened coins only. ULTRA/STRONG/MODERATE BUY counts. Sub shows 30d counts.">
+          <div class="ov-label">Actionable tiers</div>
+          <div class="ai-summary">
+            <div class="ai-count">
+              <div class="ai-num ultra" id="ai-ultra">—</div>
+              <div class="ai-lbl">ULTRA<br>BUY</div>
+            </div>
+            <div class="ai-count">
+              <div class="ai-num strong" id="ai-strong">—</div>
+              <div class="ai-lbl">STRONG<br>BUY</div>
+            </div>
+            <div class="ai-count">
+              <div class="ai-num moderate" id="ai-moderate">—</div>
+              <div class="ai-lbl">MODERATE<br>BUY</div>
+            </div>
+          </div>
+          <div class="ov-sub ov-30d" id="ai-30d">—</div>
+        </div>
+        <div class="overview-card" title="Quant signals from scorer for top 50 coins: BUY, HOLD, SELL. Based on RSI, momentum, volume, sentiment. Sub shows counts reached in the last 30 days.">
+          <div class="ov-label">Signals (Top 50)</div>
+          <div class="signal-summary">
+            <div class="sig-count">
+              <div class="sig-num buy"  id="sig-buy">—</div>
+              <div class="sig-lbl">BUY</div>
+            </div>
+            <div class="sig-count">
+              <div class="sig-num hold" id="sig-hold">—</div>
+              <div class="sig-lbl">HOLD</div>
+            </div>
+            <div class="sig-count">
+              <div class="sig-num sell" id="sig-sell">—</div>
+              <div class="sig-lbl">SELL</div>
+            </div>
+          </div>
+          <div class="ov-sub ov-30d" id="sig-30d">—</div>
+        </div>
+        <div class="overview-card" title="Federal funds rate from FRED. Higher = tighter monetary policy; lower = easier money. Affects risk appetite.">
+          <div class="ov-label">Fed Funds Rate</div>
+          <div class="ov-value" id="fed-rate">—</div>
+          <div class="ov-sub" id="fed-date">FRED</div>
+        </div>
+        <div class="overview-card" title="10-year Treasury yield from FRED. Risk-free rate proxy. Higher yields can pressure risk assets.">
+          <div class="ov-label">10Y Treasury</div>
+          <div class="ov-value" id="t10y">—</div>
+          <div class="ov-sub" id="t10y-date">FRED</div>
+        </div>
+        <div class="overview-card" title="Consumer Price Index year-over-year from FRED. Inflation gauge. High CPI = Fed may keep rates higher.">
+          <div class="ov-label">CPI (YoY)</div>
+          <div class="ov-value" id="cpi">—</div>
+          <div class="ov-sub" id="cpi-date">FRED</div>
+        </div>
+        <div class="overview-card" title="M2 money supply YoY % from FRED. Liquidity indicator: expansion supports risk assets; &gt;5% favors BUY in BEAR/SIDEWAYS with expert confirm.">
+          <div class="ov-label">M2 (YoY)</div>
+          <div class="ov-value" id="m2">—</div>
+          <div class="ov-sub" id="m2-date">FRED</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================
+       ACCOUNT OVERVIEW WIDGET
+       ============================================================ -->
+  <div class="account-overview-card" id="account-overview-card">
+    <div class="account-overview-low-cash-banner" id="ao-low-cash-banner" style="display:none">
+      <span id="ao-low-cash-msg"></span>
+      <button type="button" class="account-overview-sync-btn" onclick="syncBalanceFromExchange()">Sync cash</button>
+    </div>
+    <div class="account-overview-header">
+      <span class="account-overview-title">💼 Trading Account Overview</span>
+      <div class="account-overview-header-right">
+        <span class="account-overview-saved-msg" id="ao-saved-msg"></span>
+        <button type="button" class="account-overview-save-btn" id="account-overview-save-btn" onclick="saveAccountOverview()">Save</button>
+      </div>
+    </div>
+    <div class="account-overview-grid">
+      <div class="account-overview-item" title="Total Cash + market value of open positions. Read-only; sync cash or close positions to update.">
+        <span class="account-overview-label">Total Account Value</span>
+        <span class="account-overview-value" id="ao-total-value">—</span>
+      </div>
+      <div class="account-overview-item">
+        <span class="account-overview-label" title="Risk-adjusted return. Target &gt;1.8 for this strategy.">Sharpe</span>
+        <div class="ao-sharpe-row">
+          <span id="ao-sharpe-val" class="ao-sharpe-val">—</span>
+          <div class="ao-sharpe-pills">
+            <button type="button" class="ao-sharpe-pill active" data-days="30" onclick="setAoSharpePeriod(30)">30d</button>
+            <button type="button" class="ao-sharpe-pill" data-days="90" onclick="setAoSharpePeriod(90)">90d</button>
+          </div>
+        </div>
+      </div>
+      <div class="account-overview-item" title="Liquid cash (USD + USDC + USDT) synced from exchange. Use Sync cash to refresh.">
+        <span class="account-overview-label">Cash Balance</span>
+        <div class="account-overview-total-cash-row">
+          <span class="account-overview-value account-overview-highlight" id="ao-cash-balance">—</span>
+          <button type="button" id="ao-sync-balance-btn" class="account-overview-sync-btn" onclick="syncBalanceFromExchange()" title="Pull USD + USDC + USDT from selected exchange">Sync cash</button>
+          <button type="button" id="ao-sync-positions-btn" class="account-overview-sync-btn" onclick="syncPositionQuantitiesFromExchange()" title="Update open position quantities to match exchange">Sync positions</button>
+        </div>
+        <span class="account-overview-hint" id="ao-pending-twap-hint" style="display:none;font-size:11px;color:var(--text-dim);margin-top:2px;"></span>
+        <span class="account-overview-sync-msg" id="ao-sync-msg"></span>
+        <span class="account-overview-last-sync" id="ao-last-sync-indicator"></span>
+        <div class="account-overview-reconcile-row">
+          <span class="account-overview-reconcile-status" id="ao-reconcile-status"></span>
+          <button type="button" id="ao-reconcile-force-btn" class="account-overview-sync-btn" onclick="forceReconcile()" title="Force a fresh reconcile from exchange" style="display:none;">Reconcile</button>
+          <button type="button" id="ao-review-discrepancies-btn" class="account-overview-sync-btn" onclick="openReconcileModal()" style="display:none" title="View exchange vs journal discrepancies (read-only)">Review Discrepancies</button>
+        </div>
+      </div>
+      <div class="account-overview-item editable" title="Max % of Cash Balance to risk per trade (stop-loss). 2% = risk $20 per $1000. Typical: 1.5–2.5%.">
+        <span class="account-overview-label">Risk Parameter %</span>
+        <input type="number" id="ao-risk-pct" min="0.1" max="5" step="0.1" class="account-overview-input" onchange="markAccountOverviewDirty()" title="0.1 – 5.0%" />
+      </div>
+      <div class="account-overview-item">
+        <span class="account-overview-label" title="Max loss per trade if stopped out (Risk % of Cash Balance)">Risk per Trade</span>
+        <span class="account-overview-value" id="ao-risk-per-trade">—</span>
+      </div>
+      <div class="account-overview-item" title="Estimated position size for the next trade based on current risk parameters and market regime. Actual size varies per coin.">
+        <span class="account-overview-label">Est. Next Trade Size</span>
+        <span class="account-overview-value" id="ao-next-trade-size">—</span>
+      </div>
+      <div class="account-overview-item editable">
+        <span class="account-overview-label" title="Max % of available cash any single trade can use (liquidity cap)">Max Cash Per Trade %</span>
+        <input type="number" id="ao-max-cash-pct" min="20" max="65" step="1" class="account-overview-input" onchange="markAccountOverviewDirty()" title="20 – 65%" />
+      </div>
+      <div class="account-overview-item" title="Open positions vs max allowed. New trades are blocked when at capacity.">
+        <span class="account-overview-label">Open Positions</span>
+        <span class="account-overview-value" id="ao-open-positions">—</span>
+        <span class="account-overview-hint" id="ao-deployed-capital" style="font-size:11px;color:var(--text-dim);margin-top:2px;"></span>
+      </div>
+      <div class="account-overview-item" title="Exit strategy is fixed: winners always run — no fixed take-profit; the trailing stop is the only profit exit.">
+        <span class="account-overview-label">Exit Strategy</span>
+        <span class="account-overview-value">Winners run (trailing only)</span>
+      </div>
+      <div class="account-overview-item" id="ao-heloc-indicator" style="display:none;" title="HELOC funding mode active. Click to view Funding tab.">
+        <span class="account-overview-label">Funding</span>
+        <span class="account-overview-value" id="ao-heloc-badge" style="cursor:pointer;color:var(--cyan);" onclick="switchTab('funding'); loadFundingTab();">—</span>
+      </div>
+    </div>
+    <!-- Advanced settings (collapsed by default) -->
+    <div class="account-overview-advanced-toggle" onclick="toggleAoAdvanced()">
+      <span id="ao-advanced-arrow">&#9654;</span> Advanced
+    </div>
+    <div class="account-overview-advanced" id="ao-advanced-section" style="display:none;">
+      <div class="account-overview-item" style="grid-column: 1 / -1;">
+        <span class="account-overview-label" title="Runtime position_sizer module (GET /api/position-size/settings). Saving the overview updates account config and keeps this in sync.">Position sizer module</span>
+        <span class="account-overview-value" id="ao-position-sizer-summary" style="font-size: 12px;">—</span>
+      </div>
+      <div class="account-overview-item editable">
+        <span class="account-overview-label" title="Positions below this USD value are ignored in reconciliation">Dust Threshold ($)</span>
+        <input type="number" id="ao-dust-threshold" min="0.01" step="0.01" class="account-overview-input" onchange="markAccountOverviewDirty()" title="Min 0.01" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Reconcile discrepancies modal (read-only) -->
+  <div class="modal-overlay" id="reconcile-modal" onclick="if (event.target === this) closeReconcileModal()">
+    <div class="modal" style="max-width: 480px;">
+      <button class="modal-close" onclick="closeReconcileModal()">✕</button>
+      <h3 style="margin-top: 0;">Exchange vs Journal</h3>
+      <p class="account-overview-last-sync" style="margin-bottom: 12px;">Discrepancies are for awareness only. Use &quot;Sync quantities&quot; to update journal quantities to match the exchange.</p>
+      <div id="reconcile-modal-content"></div>
+      <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+        <button type="button" id="reconcile-sync-qty-btn" class="account-overview-sync-btn" onclick="syncPositionQuantitiesFromExchange()" title="Update journal position quantities to match exchange (one position per symbol)">Sync quantities from exchange</button>
+        <button type="button" class="account-overview-sync-btn" onclick="closeReconcileModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Review modal -->
+  <div class="modal-overlay" id="monthly-review-modal" onclick="if (event.target === this) closeMonthlyReviewModal()">
+    <div class="modal" style="max-width: 720px; max-height: 90vh; overflow-y: auto;">
+      <button class="modal-close" onclick="closeMonthlyReviewModal()">✕</button>
+      <h3 style="margin-top: 0;">📋 Monthly Review Report</h3>
+      <div id="monthly-review-content" style="font-size: 14px; line-height: 1.6;"></div>
+      <button type="button" class="account-overview-sync-btn" onclick="closeMonthlyReviewModal()" style="margin-top: 16px;">Close</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CONTROLS (filter + search — above Market tab)
+       ============================================================ -->
+  <div class="controls">
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="ALL"  onclick="setFilter('ALL')">ALL</button>
+      <button class="filter-tab"        data-filter="BUY"  onclick="setFilter('BUY')">🟢 BUY</button>
+      <button class="filter-tab"        data-filter="HOLD" onclick="setFilter('HOLD')">🟡 HOLD</button>
+      <button class="filter-tab"        data-filter="SELL" onclick="setFilter('SELL')">🔴 SELL</button>
+    </div>
+
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" type="text" id="search" placeholder="Search coin or symbol..." oninput="applyFilters()" />
+    </div>
+
+    <div class="results-count" id="results-count"></div>
+
+    <label class="onchain-cols-toggle" title="Show SOPR, Netflow, LTH Δ columns">
+      <input type="checkbox" id="toggle-onchain-cols" onchange="toggleOnchainCols(this.checked)">
+      <span>Show on-chain columns</span>
+    </label>
+
+    <button class="journal-tab-btn" onclick="showJournal()">📒 Trade Journal</button>
+  </div>
+
+  <!-- ============================================================
+       MAIN TAB NAV
+       ============================================================ -->
+  <div class="main-tabs">
+  <button class="main-tab active" data-tab="market" onclick="switchTab('market')"><i data-lucide="bar-chart-3"></i> Market</button>
+  <button class="main-tab" data-tab="performance" onclick="switchTab('performance'); loadPerformanceTab();"><i data-lucide="trending-up"></i> Performance</button>
+  <button class="main-tab" data-tab="positions" onclick="switchTab('positions')"><i data-lucide="briefcase"></i> Positions</button>
+  <button class="main-tab" data-tab="reports" onclick="switchTab('reports')"><i data-lucide="clipboard-list"></i> Reports</button>
+  <button class="main-tab" data-tab="roadmap" onclick="switchTab('roadmap'); loadRoadmapTab();"><i data-lucide="compass"></i> Roadmap</button>
+  <button class="main-tab" data-tab="alerts" onclick="switchTab('alerts'); loadAlertsTab();"><i data-lucide="bell"></i> Alerts/Refreshes</button>
+  <button class="main-tab" data-tab="xrpl-ledger" onclick="switchTab('xrpl-ledger'); loadXrplTab();"><i data-lucide="link"></i> XRPL Ledger</button>
+  <button class="main-tab" data-tab="funding" onclick="switchTab('funding'); loadFundingTab();"><i data-lucide="wallet"></i> Funding</button>
+  <button class="main-tab" data-tab="data-sources" onclick="switchTab('data-sources'); loadDataSourcesTab();"><i data-lucide="radio"></i> Data Sources</button>
+  <button class="main-tab" data-tab="optimizer" onclick="switchTab('optimizer'); loadOptimizerTab();"><i data-lucide="settings"></i> Optimizer</button>
+</div>
+
+  <!-- ============================================================
+       MARKET TAB
+       ============================================================ -->
+  <div class="tab-panel active" id="tab-market">
+
+  <!-- ============================================================
+       QUANT TOP PICKS SECTION
+       ============================================================ -->
+  <div class="ai-section" id="ai-section" style="display:none">
+    <div class="ai-section-header">
+      <div class="ai-section-title">
+        📊 Quant Top Picks
+      </div>
+      <button class="top-picks-btn" id="top-picks-btn" onclick="loadTopPicks()">
+        <span id="picks-btn-icon">✦</span> Get Quant Top Picks
+      </button>
+    </div>
+    <div id="picks-container"></div>
+  </div>
+
+  <!-- ============================================================
+       TABLE
+       ============================================================ -->
+  <div class="table-wrap">
+    <div id="loading" class="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">Fetching live market data...</div>
+    </div>
+
+    <div id="error-container"></div>
+
+    <table id="main-table" style="display:none">
+      <thead>
+        <tr>
+          <th onclick="sortBy('market_cap_rank')">#</th>
+          <th>Coin</th>
+          <th class="right" onclick="sortBy('current_price')">Price</th>
+          <th class="right" onclick="sortBy('price_change_percentage_1h_in_currency')">1H%</th>
+          <th class="right" onclick="sortBy('price_change_percentage_24h')">24H%</th>
+          <th class="right" onclick="sortBy('price_change_percentage_7d_in_currency')">7D%</th>
+          <th class="right" onclick="sortBy('market_cap')">Mkt Cap</th>
+          <th class="center" onclick="sortBy('indicators.rsi')">RSI</th>
+          <th class="center" onclick="sortBy('indicators.momentum')">Momentum</th>
+          <th class="center">MACD</th>
+          <th class="right" onclick="sortBy('score')">Score</th>
+          <th class="center" onclick="sortBy('signal')">Signal</th>
+          <th class="center">Quant Tier</th>
+          <th class="center">Quant Rec</th>
+          <th class="center col-onchain" title="Spent Output Profit Ratio (above 1 = profit-taking)">SOPR</th>
+          <th class="center col-onchain" title="Exchange netflow 24h (positive = selling pressure)">Netflow</th>
+          <th class="center col-onchain" title="LTH supply change 24h %">LTH Δ</th>
+          <th>Risk Params</th>
+          <th class="center" title="Potential risk budget usage if this trade is taken. Shows position size as % of account vs risk cap.">Budget %</th>
+          <th class="center">Quant</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  </div><!-- end #tab-market -->
+
+  <!-- ============================================================
+       POSITIONS TAB
+       ============================================================ -->
+  <div class="tab-panel" id="tab-positions">
+    
+    <!-- Quick Stats Bar -->
+    <div class="positions-stats-bar">
+      <div class="pstat">
+        <div class="pstat-label">Open Positions</div>
+        <div class="pstat-value" id="pstat-open">—</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-label">Total Unrealized P&L</div>
+        <div class="pstat-value" id="pstat-unrealized">—</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-label">Closed Positions</div>
+        <div class="pstat-value" id="pstat-closed">—</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-label">Total Realized P&L</div>
+        <div class="pstat-value" id="pstat-realized">—</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-label">Win Rate</div>
+        <div class="pstat-value" id="pstat-winrate">—</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-label">Target Hit Rate</div>
+        <div class="pstat-value" id="pstat-aihit">—</div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin:8px 0;gap:8px">
+      <a class="export-btn" href="/api/journal/export" download>⬇ Export CSV</a>
+      <a class="export-btn" href="/api/journal/export/xlsx" download>⬇ Export XLS</a>
+    </div>
+
+    <!-- Pending TWAP Orders Section -->
+    <div class="positions-section" id="pending-twap-section" style="display:none;">
+      <div class="positions-section-header">
+        <h3>⏳ Pending TWAP / Market Buys</h3>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">Orders in progress. Cash is reserved until they complete. If an order already filled: use <strong>Add to journal from Coinbase</strong> to sync quantity and price from the exchange, open the position, and remove from pending; or use <strong>Remove</strong> to only clear pending.</p>
+      <div class="positions-table-wrap">
+        <table class="positions-table">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Amount (USD)</th>
+              <th>Mode</th>
+              <th>Started</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="pending-twap-tbody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Open Positions Section -->
+    <div class="positions-section">
+      <div class="positions-section-header">
+        <h3>🟢 Open Positions</h3>
+        <button class="btn-refresh-positions" onclick="loadPositionsTab()">↻ Refresh</button>
+      </div>
+      <div class="positions-table-wrap">
+        <table class="positions-table">
+          <thead>
+            <tr>
+              <th title="Live open # (newest first). Hover cell for internal journal id / TRD (paper sims use separate ids).">Live #</th>
+              <th>Coin</th>
+              <th>Signal</th>
+              <th>Entry</th>
+              <th>Current</th>
+              <th>Quantity</th>
+              <th>Cost Basis</th>
+              <th>Unrealized P&L</th>
+              <th>Quant Target</th>
+              <th>To Target</th>
+              <th>Quant Stop</th>
+              <th>To Stop</th>
+              <th>Trade date</th>
+              <th>Days open</th>
+              <th title="This position's capital as % of total cash. Sum equals the risk tile above; same denominator as auto-exec gate.">Budget %</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="open-positions-tbody">
+            <tr><td colspan="16" class="no-positions">No open positions</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Closed Positions Section -->
+    <div class="positions-section">
+      <div class="positions-section-header">
+        <h3>📜 Closed Positions History</h3>
+        <label class="positions-live-filter" style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);cursor:pointer;">
+          <input type="checkbox" id="closed-live-only-checkbox" checked onchange="toggleClosedLiveOnly()" />
+          Live trades only <span style="opacity:0.75;">(hide paper / test)</span>
+        </label>
+      </div>
+      <div class="positions-table-wrap">
+        <table class="positions-table">
+          <thead>
+            <tr>
+              <th title="Live trade ordinal: newest = #1. Hover for journal id and legacy trade_id.">#</th>
+              <th title="Live = real account; Paper = simulation; Test = dashboard test">Mode</th>
+              <th>Coin</th>
+              <th>Signal</th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th>Quantity</th>
+              <th>Realized P&L</th>
+              <th>Quant Target</th>
+              <th title="Did exit price reach the Quant/AI target price? A trade can be a WIN (profitable) but NO here if you closed before target (e.g. trailing stop or manual exit).">Hit target?</th>
+              <th title="WIN = closed with profit; LOSS = closed with loss; EVEN = breakeven.">Outcome</th>
+              <th>Entry Time</th>
+              <th>Exit Time</th>
+              <th>Duration</th>
+            </tr>
+          </thead>
+          <tbody id="closed-positions-tbody">
+            <tr><td colspan="14" class="no-positions">No closed positions yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- end #tab-positions -->
+
+  <!-- ============================================================
+       XRPL LEDGER TAB
+       ============================================================ -->
+  <div class="tab-panel" id="tab-xrpl-ledger">
+    <div class="journal-wrap" style="max-width: 1200px; margin: 0 auto;">
+      <div class="schedule-title" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <span>🔗 XRPL Ledger<span id="xrpl-account-label"></span></span>
+        <button type="button" class="schedule-save-btn" onclick="loadXrplTab()">↻ Refresh</button>
+      </div>
+
+      <!-- Snapshot: positions + value over time -->
+      <div class="xrpl-snapshot-section" style="margin-bottom: 24px;">
+        <div class="schedule-title" style="font-size: 14px; margin-bottom: 12px;">Snapshot &amp; value</div>
+        <div id="xrpl-snapshot-loading" style="font-size: 13px; color: var(--text-dim);">Loading…</div>
+        <div id="xrpl-snapshot-content" style="display: none;">
+          <!-- Value over 1d, 1w, 30d, 90d, 1y -->
+          <div class="stats-row" style="margin-bottom: 16px; grid-template-columns: repeat(6, 1fr);">
+            <div class="perf-metric-card">
+              <div class="perf-metric-label">Value now (USD)</div>
+              <div class="perf-metric-value" id="xrpl-value-now">—</div>
+            </div>
+            <div class="perf-metric-card">
+              <div class="perf-metric-label">1d ago</div>
+              <div class="perf-metric-value" id="xrpl-value-1d">—</div>
+            </div>
+            <div class="perf-metric-card">
+              <div class="perf-metric-label">1w ago</div>
+              <div class="perf-metric-value" id="xrpl-value-1w">—</div>
+            </div>
+            <div class="perf-metric-card">
+              <div class="perf-metric-label">30d ago</div>
+              <div class="perf-metric-value" id="xrpl-value-30d">—</div>
+            </div>
+            <div class="perf-metric-card">
+              <div class="perf-metric-label">90d ago</div>
+              <div class="perf-metric-value" id="xrpl-value-90d">—</div>
+            </div>
+            <div class="perf-metric-card">
+              <div class="perf-metric-label">1y ago</div>
+              <div class="perf-metric-value" id="xrpl-value-1y">—</div>
+            </div>
+          </div>
+          <!-- Positions table -->
+          <div class="schedule-title" style="font-size: 14px; margin-bottom: 8px;">Positions (balances)</div>
+          <div class="history-table-wrap" style="margin-bottom: 16px;">
+            <table class="history-table">
+              <thead>
+                <tr><th>Asset</th><th>Balance</th><th>Value</th><th>USD per token</th></tr>
+              </thead>
+              <tbody id="xrpl-positions-tbody">
+                <tr><td colspan="4" style="text-align:center;color:var(--text-dim);">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="font-size: 12px; color: var(--text-dim);">XRP price (USD): <span id="xrpl-xrp-price">—</span></div>
+        </div>
+        <div id="xrpl-snapshot-error" style="display: none; color: var(--red); font-size: 13px;"></div>
+      </div>
+
+      <!-- Events (bottom half) -->
+      <div class="xrpl-events-section">
+        <div class="schedule-title" style="font-size: 14px; margin-bottom: 8px;">Events (transactions)</div>
+        <div id="xrpl-events-loading" style="font-size: 13px; color: var(--text-dim);">Loading…</div>
+        <div id="xrpl-events-content" style="display: none;">
+          <div class="history-table-wrap" style="max-height: 420px; overflow-y: auto;">
+            <table class="history-table">
+              <thead>
+                <tr><th>Time</th><th>Type</th><th>Amount (XRP)</th><th>Amount (other)</th><th>Fee</th><th>Hash</th></tr>
+              </thead>
+              <tbody id="xrpl-events-tbody">
+                <tr><td colspan="6" style="text-align:center;color:var(--text-dim);">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button type="button" class="schedule-save-btn" id="xrpl-load-more-btn" style="margin-top: 12px; display: none;" onclick="loadXrplEventsMore()">Load more</button>
+        </div>
+        <div id="xrpl-events-error" style="display: none; color: var(--red); font-size: 13px;"></div>
+      </div>
+    </div>
+  </div><!-- end #tab-xrpl-ledger -->
+
+  <!-- ============================================================
+       PERFORMANCE TAB — Sections match the daily recursive optimizer email; sync with format_report_html when changing the email.
+       ============================================================ -->
+  <div class="tab-panel" id="tab-performance">
+    <div class="journal-wrap" style="max-width: 1200px; margin: 0 auto;">
+      <div style="margin-bottom: 12px; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--cyan); border-radius: var(--radius-lg); font-size: 12px; color: var(--text-secondary);">Swing Trader v1.0 — Manual &amp; Performance tab reflect all upgrades (regression scorer, Kelly sizing, walk-forward optimizer, regret-weighted missed opportunities).</div>
+      <div class="schedule-title" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <span>📈 Recursive Optimizer Report</span>
+        <span id="perf-last-cycle-label" style="font-size: 13px; color: var(--text-dim);">Last cycle: —</span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="schedule-save-btn" onclick="loadPerformanceTab()">🔄 Refresh</button>
+          <button type="button" class="schedule-save-btn" onclick="resendOptimizerReport()" title="POST /api/optimizer/resend — requires localhost or X-Admin-Token">📧 Resend optimizer email</button>
+          <button type="button" class="schedule-save-btn" onclick="openMonthlyReviewModal()">📋 Monthly Review</button>
+        </div>
+      </div>
+
+      <!-- 1. Header card (cycle, date, regime, system closed/open, 7d/30d win rate, etc.) -->
+      <div id="perf-recursive-header" class="perf-recursive-section" style="margin-bottom: 20px; padding: 20px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg);"></div>
+
+      <!-- Paper evidence (MODERATE counterfactual + policy skips) -->
+      <div id="perf-paper-evidence" class="perf-recursive-section" style="margin-bottom: 20px; display: none;"></div>
+
+      <!-- Charts: Equity Curve + P&L per Trade -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <div class="chart-container">
+          <div class="chart-title">Equity Curve — Cumulative P&L</div>
+          <canvas id="equity-curve-chart" height="260"></canvas>
+        </div>
+        <div class="chart-container">
+          <div class="chart-title">P&L per Trade</div>
+          <canvas id="pnl-bar-chart" height="260"></canvas>
+        </div>
+      </div>
+
+      <!-- 1b. Regression Model Status (v1.0) -->
+      <div id="perf-regression-status" class="perf-recursive-section" style="margin-bottom: 20px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg); display: none;"></div>
+
+      <!-- 2. Weekly consolidated (Friday only) -->
+      <div id="perf-weekly-consolidated" class="perf-recursive-section" style="margin-bottom: 20px; display: none;"></div>
+
+      <!-- 3. Loss analysis -->
+      <div id="perf-loss-analysis" class="perf-recursive-section" style="margin-bottom: 20px;"></div>
+
+      <!-- 4. Hold & missed opportunity -->
+      <div id="perf-hold-missed" class="perf-recursive-section" style="margin-bottom: 20px;"></div>
+
+      <!-- 5. Performance by regime & quant path -->
+      <div id="perf-path-performance" class="perf-recursive-section" style="margin-bottom: 20px;"></div>
+
+      <!-- 6. Manual override trades -->
+      <div id="perf-manual-overrides" class="perf-recursive-section" style="margin-bottom: 20px; display: none;"></div>
+
+      <!-- 7. Auto-applied threshold changes -->
+      <div id="perf-auto-applied" class="perf-recursive-section" style="margin-bottom: 20px;"></div>
+
+      <!-- 8. Recommendations needing your review -->
+      <div id="perf-recommendations-review" class="perf-recursive-section" style="margin-bottom: 20px;"></div>
+
+      <!-- 9. How are applied changes performing? -->
+      <div id="perf-evaluations" class="perf-recursive-section" style="margin-bottom: 28px;"></div>
+
+      <hr style="border: none; border-top: 1px solid var(--border-dim); margin: 24px 0;">
+      <div class="schedule-title" style="font-size: 14px; margin-bottom: 12px;">Additional analytics (not in recursive email)</div>
+      <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 16px;">Sharpe, Sortino, regime tables, model attribution, backtest, and full ML learning report. All metrics here use the same single source as the report above: the trade journal (one record per closed trade). Missed-opportunity analysis is from the ML learning report (outcome backfill + screening/recommendations).</p>
+
+      <!-- Summary metrics -->
+      <div class="stats-row" style="margin-bottom: 20px; grid-template-columns: repeat(5, 1fr);">
+        <div class="perf-metric-card">
+          <div class="perf-metric-label">Sharpe</div>
+          <div class="perf-metric-value" id="perf-sharpe-hero">—</div>
+        </div>
+        <div class="perf-metric-card">
+          <div class="perf-metric-label">Sortino</div>
+          <div class="perf-metric-value" id="perf-sortino">—</div>
+        </div>
+        <div class="perf-metric-card">
+          <div class="perf-metric-label">Max DD</div>
+          <div class="perf-metric-value" id="perf-maxdd">—</div>
+        </div>
+        <div class="perf-metric-card">
+          <div class="perf-metric-label">Expectancy</div>
+          <div class="perf-metric-value" id="perf-expectancy">—</div>
+        </div>
+        <div class="perf-metric-card">
+          <div class="perf-metric-label">Win Rate</div>
+          <div class="perf-metric-value" id="perf-winrate">—</div>
+        </div>
+      </div>
+
+      <!-- Win rate by regime -->
+      <div class="schedule-title" style="font-size: 13px; margin-bottom: 8px;">Win Rate by Regime</div>
+      <div class="history-table-wrap" style="margin-bottom: 20px;">
+        <table class="history-table">
+          <thead>
+            <tr><th>Regime</th><th>Trades</th><th>Win Rate</th><th>Avg Win</th><th>Avg Loss</th><th>Total P&L %</th></tr>
+          </thead>
+          <tbody id="perf-regime-tbody">
+            <tr><td colspan="6" style="text-align:center;color:var(--text-dim);">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Win rate by regime / scenario -->
+      <div class="schedule-title" style="font-size: 13px; margin-bottom: 8px;">Win Rate by Regime / Scenario</div>
+      <div class="history-table-wrap" style="margin-bottom: 20px;">
+        <table class="history-table">
+          <thead>
+            <tr><th>Regime</th><th>Scenario</th><th>Trades</th><th>Win Rate</th><th>Avg Win</th><th>Avg Loss</th><th>Total P&L %</th></tr>
+          </thead>
+          <tbody id="perf-regime-scenario-tbody">
+            <tr><td colspan="7" style="text-align:center;color:var(--text-dim);">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Model attribution -->
+      <div class="schedule-title" style="font-size: 13px; margin-bottom: 8px;">Model Attribution</div>
+      <div class="history-table-wrap" style="margin-bottom: 8px;">
+        <table class="history-table">
+          <thead>
+            <tr><th>#</th><th>Model</th><th>Trades</th><th>Win Rate</th><th>Avg P&L $</th><th>Sharpe</th></tr>
+          </thead>
+          <tbody id="perf-attribution-tbody">
+            <tr><td colspan="6" style="text-align:center;color:var(--text-dim);">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="perf-attribution-recs" style="font-size: 12px; color: var(--text-secondary); margin-bottom: 20px;"></div>
+
+      <!-- Walk-Forward Backtest -->
+      <div class="schedule-title" style="font-size: 13px; margin-bottom: 8px;">Walk-Forward Backtest</div>
+      <div style="margin-bottom: 8px;">
+        <button type="button" class="schedule-save-btn" id="perf-run-backtest-btn" onclick="runBacktestForPerformance()">▶ Run Backtest (90d)</button>
+        <span id="perf-backtest-status" style="margin-left: 12px; font-size: 12px; color: var(--text-dim);"></span>
+      </div>
+      <div id="perf-walkforward-summary" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;"></div>
+      <div class="schedule-title" style="font-size: 13px; margin-bottom: 8px;">Backtest API (live summaries)</div>
+      <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">Loads <code>/api/backtest/suggestions</code> and <code>/api/backtest/performance</code> when you open this tab.</p>
+      <div id="perf-backtest-api-extra" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg);"></div>
+
+      <!-- ML Learning Report -->
+      <div class="schedule-title" style="font-size: 13px; margin-bottom: 8px;">📊 ML Learning Report</div>
+      <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">Full report: data/learning_report.json. Monthly run configured in Alerts/Refreshes tab.</p>
+      <div style="margin-bottom: 8px;">
+        <button type="button" class="schedule-save-btn" id="perf-learning-view-btn" onclick="loadLearningReportSummary()">View latest report</button>
+        <span id="perf-learning-status" style="margin-left: 12px; font-size: 12px; color: var(--text-dim);"></span>
+      </div>
+      <div id="perf-learning-summary" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 24px;"></div>
+    </div>
+  </div><!-- end #tab-performance -->
+
+  <!-- ============================================================
+       ROADMAP TAB
+       ============================================================ -->
+  <div class="tab-panel" id="tab-roadmap">
+    <div class="journal-wrap" style="max-width: 1200px; margin: 0 auto;">
+      <div style="margin-bottom: 12px; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--cyan); border-radius: var(--radius-lg); font-size: 12px; color: var(--text-secondary);">
+        Lean profit-first command center: KPI health, data milestones, and staged feature integration.
+      </div>
+      <div class="schedule-title" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <span>🧭 Profit-First Roadmap</span>
+        <span id="roadmap-last-updated" style="font-size: 13px; color: var(--text-dim);">Updated: —</span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="schedule-save-btn" onclick="loadRoadmapTab()">🔄 Refresh</button>
+          <button type="button" class="schedule-save-btn" onclick="runRoadmapAutomationCycle(true)" title="POST /api/roadmap/automation/run dry_run">▶ Run automation (dry-run)</button>
+          <button type="button" class="schedule-save-btn" onclick="runRoadmapAutomationCycle(false)" style="background:var(--amber);color:var(--bg-deep);" title="POST /api/roadmap/automation/run apply">▶ Run automation (live)</button>
+        </div>
+      </div>
+
+      <div class="stats-row" style="margin-bottom: 20px; grid-template-columns: repeat(4, 1fr);">
+        <div class="perf-metric-card">
+          <div class="perf-metric-label" id="roadmap-kpi-trades-label">Trades / Week</div>
+          <div class="perf-metric-value" id="roadmap-kpi-trades">—</div>
+        </div>
+        <div class="perf-metric-card">
+          <div class="perf-metric-label" id="roadmap-kpi-winrate-label">Win Rate 30d</div>
+          <div class="perf-metric-value" id="roadmap-kpi-winrate">—</div>
+        </div>
+        <div class="perf-metric-card">
+          <div class="perf-metric-label" id="roadmap-kpi-expectancy-label">Expectancy 30d</div>
+          <div class="perf-metric-value" id="roadmap-kpi-expectancy">—</div>
+        </div>
+        <div class="perf-metric-card">
+          <div class="perf-metric-label" id="roadmap-kpi-maxdd-label">Max DD 30d</div>
+          <div class="perf-metric-value" id="roadmap-kpi-maxdd">—</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg);">
+        <h3 style="margin:0 0 10px; font-size: 14px; color: var(--cyan);">Data Milestones</h3>
+        <div class="stats-row" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 10px;">
+          <div class="perf-metric-card">
+            <div class="perf-metric-label" id="roadmap-ms-closed-label">Closed Trades</div>
+            <div class="perf-metric-value" id="roadmap-ms-closed">—</div>
+          </div>
+          <div class="perf-metric-card">
+            <div class="perf-metric-label" id="roadmap-ms-attr-label">Attribution Completeness</div>
+            <div class="perf-metric-value" id="roadmap-ms-attr">—</div>
+          </div>
+          <div class="perf-metric-card">
+            <div class="perf-metric-label">Milestone Gate</div>
+            <div class="perf-metric-value" id="roadmap-ms-gate">—</div>
+          </div>
+        </div>
+        <div id="roadmap-next-action" style="font-size: 13px; color: var(--text-secondary);">—</div>
+      </div>
+
+      <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg);">
+        <h3 style="margin:0 0 10px; font-size: 14px; color: var(--cyan);">Feature Integration Stages</h3>
+        <div id="roadmap-stage-chips"></div>
+        <div id="roadmap-stage-note" style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">—</div>
+      </div>
+
+      <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg);">
+        <h3 style="margin:0 0 10px; font-size: 14px; color: var(--cyan);">Automation Status</h3>
+        <div id="roadmap-auto-summary" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">—</div>
+        <div id="roadmap-auto-pending" style="font-size: 13px; color: var(--text-secondary);">—</div>
+      </div>
+
+      <div style="padding: 16px; background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg);">
+        <h3 style="margin:0 0 10px; font-size: 14px; color: var(--cyan);">Canonical Roadmap (Doc-Synced)</h3>
+        <div id="roadmap-doc-content" style="color: var(--text-secondary); font-size: 13px; line-height: 1.7;">Loading roadmap strategy...</div>
+      </div>
+    </div>
+  </div><!-- end #tab-roadmap -->
+
+  <!-- Edit position modal (Positions tab) -->
+  <div class="edit-position-modal" id="edit-position-modal">
+    <div class="edit-position-inner">
+      <h3 id="edit-position-title">Edit trade</h3>
+      <input type="hidden" id="edit-position-id" value="">
+      <label for="edit-position-notes">Notes</label>
+      <textarea id="edit-position-notes" placeholder="Optional notes"></textarea>
+      <label for="edit-position-entry-price">Entry price</label>
+      <input type="number" id="edit-position-entry-price" step="any" min="0.00000001" placeholder="Entry price">
+      <label for="edit-position-quantity">Quantity</label>
+      <input type="number" id="edit-position-quantity" step="any" min="0.00000001" placeholder="Quantity">
+      <label for="edit-position-target-pct">Target %</label>
+      <input type="number" id="edit-position-target-pct" step="0.1" min="0" placeholder="e.g. 6">
+      <label for="edit-position-stop-pct">Stop %</label>
+      <input type="number" id="edit-position-stop-pct" step="0.1" min="0" placeholder="e.g. 2">
+      <div class="edit-position-actions">
+        <button type="button" class="btn-edit-position-cancel" onclick="hideEditPositionModal()">Cancel</button>
+        <button type="button" class="btn-edit-position-save" onclick="saveEditPosition()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       REPORTS TAB (Manual & Test Documentation — links only)
+       ============================================================ -->
+  <div class="tab-panel" id="tab-reports">
+    <div style="max-width: 800px; margin: 0 auto; padding: 40px 20px;">
+      
+      <h2 style="margin: 0 0 30px 0; color: var(--text-primary); font-family: var(--font-ui); font-weight: 800;">📋 Reports</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 30px;">Documentation and test reports. Download as Word documents.</p>
+
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- User Manual -->
+        <div style="background: var(--card-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px;">📖 User Manual</h3>
+          <p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 14px;">Complete Elite Swing Trader user manual — system overview, workflows, FAQ, glossary.</p>
+          <a href="/api/manual/export/docx" style="display: inline-block; padding: 12px 24px; background: var(--cyan); color: var(--bg-deep); border-radius: var(--radius); font-weight: 600; font-size: 14px; text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+            ⬇️ Download User Manual (.docx)
+          </a>
+        </div>
+
+        <!-- Test Documentation -->
+        <div style="background: var(--card-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px;">🧪 Test Documentation</h3>
+          <p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 14px;">Automated test suite (1100+ tests), exit-strategy & execution tests, run commands. Run tests: <code style="background: var(--bg-deep); padding: 2px 8px; border-radius: 4px;">run_tests.bat</code> or <code style="background: var(--bg-deep); padding: 2px 8px; border-radius: 4px;">python -m pytest -v</code></p>
+          <a href="/api/testing/documentation" download="TESTING_PLAN.md" style="display: inline-block; padding: 12px 24px; background: var(--cyan); color: var(--bg-deep); border-radius: var(--radius); font-weight: 600; font-size: 14px; text-decoration: none; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+            ⬇️ Download Test Documentation (.md)
+          </a>
+        </div>
+
+        <!-- Execution Summary -->
+        <div style="background: var(--card-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px;">Execution Summary</h3>
+          <p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 14px;">Aggregated fills, fees, and slippage from the execution audit (last N days).</p>
+          <div style="margin-bottom: 12px;">
+            <label style="margin-right: 8px;">Days:</label>
+            <select id="reports-exec-summary-days" style="padding: 6px 10px; border-radius: var(--radius); background: var(--bg-deep); color: var(--text-primary); border: 1px solid var(--border);">
+              <option value="7">7</option>
+              <option value="14">14</option>
+              <option value="30">30</option>
+            </select>
+            <button type="button" style="margin-left: 12px; padding: 8px 16px; background: var(--cyan); color: var(--bg-deep); border: none; border-radius: var(--radius); font-weight: 600; cursor: pointer;" onclick="loadExecutionSummary()">View</button>
+            <a id="reports-exec-summary-export" href="#" style="margin-left: 8px; padding: 8px 16px; background: var(--card-bg); color: var(--cyan); border: 1px solid var(--cyan); border-radius: var(--radius); font-weight: 600; text-decoration: none; display: inline-block;">Export CSV</a>
+          </div>
+          <pre id="reports-exec-summary-body" style="margin: 0; padding: 12px; background: var(--bg-deep); border-radius: var(--radius); font-size: 13px; white-space: pre-wrap; word-break: break-word; min-height: 60px; color: var(--text-secondary);">Click View to load.</pre>
+        </div>
+
+        <!-- Reconciliation History -->
+        <div style="background: var(--card-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border);">
+          <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px;">Reconciliation History</h3>
+          <p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 14px;">Log of reconcile and sync-position-quantities runs (exchange vs journal).</p>
+          <div style="margin-bottom: 12px;">
+            <label style="margin-right: 8px;">Limit:</label>
+            <select id="reports-recon-history-limit" style="padding: 6px 10px; border-radius: var(--radius); background: var(--bg-deep); color: var(--text-primary); border: 1px solid var(--border);">
+              <option value="20">20</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+            <button type="button" style="margin-left: 12px; padding: 8px 16px; background: var(--cyan); color: var(--bg-deep); border: none; border-radius: var(--radius); font-weight: 600; cursor: pointer;" onclick="loadReconciliationHistory()">View</button>
+          </div>
+          <pre id="reports-recon-history-body" style="margin: 0; padding: 12px; background: var(--bg-deep); border-radius: var(--radius); font-size: 13px; white-space: pre-wrap; word-break: break-word; min-height: 60px; color: var(--text-secondary);">Click View to load.</pre>
+        </div>
+      </div>
+    </div>
+  </div><!-- end #tab-reports -->
+
+  <!-- ============================================================
+       ALERTS / REFRESHES TAB
+       ============================================================ -->
+  <div class="tab-panel" id="tab-alerts">
+    <div class="schedule-container">
+      
+      <!-- Refreshes & scheduled (unified list) -->
+      <div class="schedule-section">
+        <div class="schedule-header">
+          <div class="schedule-title">Alerts &amp; Refreshes</div>
+          <span class="alerts-section-hint">Telegram and Email per row; timing/frequency on the right when applicable.</span>
+        </div>
+        <table class="alerts-refreshes-table">
+          <thead>
+            <tr>
+              <th>Alert / Refresh</th>
+              <th class="alerts-th-tg">Telegram</th>
+              <th class="alerts-th-email">Email</th>
+              <th class="alerts-th-timing">Timing / Frequency</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Auto-Refresh -->
+            <tr class="alerts-refresh-row">
+              <td>Auto-Refresh</td>
+              <td class="alerts-td-na">—</td>
+              <td class="alerts-td-na">—</td>
+              <td class="alerts-td-timing">
+                <select id="schedule-dropdown" class="schedule-dropdown">
+                  <option value="off">Off (Manual Only)</option>
+                  <option value="5min">5 Minutes</option>
+                  <option value="15min">15 Minutes</option>
+                  <option value="30min">30 Minutes</option>
+                  <option value="1hour">1 Hour (Recommended)</option>
+                  <option value="2hour">2 Hours</option>
+                  <option value="4hour">4 Hours</option>
+                  <option value="6hour">6 Hours</option>
+                  <option value="daily">Daily (9am ET)</option>
+                </select>
+                <button id="schedule-save-btn" class="schedule-save-btn" onclick="saveSchedule()">💾 Save</button>
+                <span class="schedule-status-inline">
+                  <span class="status-indicator" id="status-indicator"></span>
+                  <span id="status-text">Loading...</span>
+                  <span id="next-refresh" style="margin-left: 8px;"></span>
+                </span>
+                <div class="schedule-info-inline">
+                  <span>Refreshes today: <strong id="count-today">0</strong></span>
+                  <span style="margin-left: 12px;">This month: <strong id="count-month">0</strong></span>
+                  <span style="margin-left: 12px;">Last: <span id="last-refresh">Never</span></span>
+                </div>
+              </td>
+            </tr>
+            <!-- Daily status email -->
+            <tr class="alerts-refresh-row">
+              <td>Daily status email</td>
+              <td class="alerts-td-na">—</td>
+              <td class="alerts-td-na">—</td>
+              <td class="alerts-td-timing">
+                <label class="alerts-check-row" style="display: inline-flex; align-items: center; gap: 8px; margin-right: 12px;">
+                  <input type="checkbox" id="alerts-status-email-enabled" /> Enable
+                </label>
+                <select id="alerts-status-email-preset" class="schedule-dropdown" style="width: auto;" onchange="onAlertsStatusEmailPresetChange()">
+                  <option value="3x">3× daily (9am, 1pm, 5pm ET)</option>
+                  <option value="2x">2× daily (9am, 5pm ET)</option>
+                  <option value="6h">Every 6 hours</option>
+                  <option value="1x">Once daily (9am ET)</option>
+                  <option value="custom">Custom hours</option>
+                </select>
+                <span id="alerts-status-email-custom-row" style="display: none; margin-left: 8px;">
+                  <input type="text" id="alerts-status-email-hours" class="schedule-dropdown" style="width: 120px;" placeholder="e.g. 9, 13, 17" />
+                </span>
+                <button id="alerts-status-email-save-btn" class="schedule-save-btn" onclick="saveAlertsStatusEmail()">💾 Save</button>
+              </td>
+            </tr>
+            <!-- Monthly ML learning run -->
+            <tr class="alerts-refresh-row">
+              <td>Monthly ML learning run</td>
+              <td class="alerts-td-na">—</td>
+              <td class="alerts-td-na">—</td>
+              <td class="alerts-td-timing">
+                <label class="alerts-check-row" style="display: inline-flex; align-items: center; gap: 8px; margin-right: 12px;">
+                  <input type="checkbox" id="schedule-learning-enabled" /> Enable
+                </label>
+                <label style="font-size: 13px;">Day (1–28):</label>
+                <select id="schedule-learning-day" class="schedule-dropdown" style="width: auto; margin-left: 4px;">
+                  <option value="1">1</option>
+                </select>
+                <button id="schedule-learning-save-btn" class="schedule-save-btn" onclick="saveMonthlyLearning()">💾 Save</button>
+                <span style="margin-left: 12px; font-size: 13px; color: var(--text-secondary);">Last run: <span id="schedule-learning-last-run">—</span></span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Channels -->
+      <div class="schedule-section">
+        <div class="schedule-header">
+          <div class="schedule-title">📤 Channels</div>
+        </div>
+        <div class="alerts-channel-row">
+          <label class="alerts-check-row">
+            <input type="checkbox" id="alerts-email-enabled" onchange="saveAlertsChannels()" />
+            <span>Email</span>
+          </label>
+          <span class="alerts-channel-status" id="alerts-email-status">—</span>
+        </div>
+        <div class="alerts-channel-row">
+          <label class="alerts-check-row">
+            <input type="checkbox" id="alerts-telegram-enabled" onchange="saveAlertsChannels()" />
+            <span>Telegram</span>
+          </label>
+          <span class="alerts-channel-status" id="alerts-telegram-status">—</span>
+        </div>
+      </div>
+      
+      <!-- Alert types -->
+      <div class="schedule-section">
+        <div class="schedule-header">
+          <div class="schedule-title">🔔 Alert Types</div>
+          <span class="alerts-section-hint">Choose which alerts to send and whether each goes to Email and/or Telegram</span>
+        </div>
+        <div class="alerts-types-list">
+          <div class="alerts-subsection-label">Signals</div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-ai_signal" onchange="saveAlertsTypes()" /> Quant recommendation (ULTRA/STRONG BUY)</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-ai_signal-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-ai_signal-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-technical_signal" onchange="saveAlertsTypes()" /> Technical buy/sell signal</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-technical_signal-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-technical_signal-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+          <div class="alerts-subsection-label" style="margin-top:12px">Exit monitoring (stop/target/trailing)</div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-stop_loss" onchange="saveAlertsTypes()" /> Stop-loss hit</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-stop_loss-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-stop_loss-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-take_profit" onchange="saveAlertsTypes()" /> Take-profit hit</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-take_profit-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-take_profit-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-trailing_stop" onchange="saveAlertsTypes()" /> Trailing stop hit (after 3% profit)</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-trailing_stop-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-trailing_stop-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+          <div class="alerts-subsection-label" style="margin-top:12px">System</div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-insufficient_cash" onchange="saveAlertsTypes()" /> Insufficient cash (trade skipped)</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-insufficient_cash-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-insufficient_cash-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-low_cash" onchange="saveAlertsTypes()" /> Low cash warning (&lt;10% available)</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-low_cash-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-low_cash-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-drift" onchange="saveAlertsTypes()" /> Drift alert</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-drift-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-drift-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-stress_report" onchange="saveAlertsTypes()" /> Stress report (30d/60d after monthly run)</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-stress_report-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-stress_report-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+          <div class="alerts-type-row">
+            <label class="alerts-check-row alerts-type-label"><input type="checkbox" id="alerts-type-sync_balance_failure" onchange="saveAlertsTypes()" /> Sync balance failure</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-sync_balance_failure-email" onchange="saveAlertsTypes()" /> Email</label>
+            <label class="alerts-check-row alerts-channel-check"><input type="checkbox" id="alerts-type-sync_balance_failure-telegram" onchange="saveAlertsTypes()" /> Telegram</label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Email recipients -->
+      <div class="schedule-section">
+        <div class="schedule-header">
+          <div class="schedule-title">📧 Email Recipients</div>
+        </div>
+        <p class="alerts-hint">Add email addresses to receive alerts. SMTP must be configured in .env (SMTP_USERNAME, SMTP_PASSWORD).</p>
+        <div class="alerts-email-add">
+          <input type="email" id="alerts-email-input" placeholder="email@example.com" class="alerts-email-input" />
+          <button type="button" class="schedule-save-btn" onclick="addAlertEmail()">Add</button>
+        </div>
+        <ul class="alerts-email-list" id="alerts-email-list">
+          <!-- Filled by JS -->
+        </ul>
+      </div>
+      
+      <!-- Test -->
+      <div class="schedule-section">
+        <button type="button" class="schedule-save-btn" onclick="sendTestAlert()">Send test alert</button>
+        <span class="alerts-test-result" id="alerts-test-result"></span>
+      </div>
+      
+    </div>
+  </div><!-- end #tab-alerts -->
+
+  <!-- ============================================================
+       FUNDING TAB (HELOC)
+       ============================================================ -->
+  <div class="tab-panel" id="tab-funding">
+    <div class="funding-tab-container" style="max-width: 900px; padding: 24px 28px;">
+
+      <!-- HELOC Configuration -->
+      <div class="account-overview-card" id="funding-config-card">
+        <div class="account-overview-header">
+          <span class="account-overview-title">HELOC Configuration</span>
+          <div class="account-overview-header-right">
+            <span class="account-overview-saved-msg" id="funding-saved-msg"></span>
+            <button type="button" class="account-overview-save-btn" id="funding-save-btn" onclick="saveFundingSettings()">Save</button>
+          </div>
+        </div>
+        <div class="account-overview-grid">
+          <div class="account-overview-item editable">
+            <span class="account-overview-label" title="Enable HELOC funding mode. Risk caps use notional amount; hurdle rate filters low-quality trades.">HELOC Mode</span>
+            <label class="onchain-cols-toggle" style="margin:0;">
+              <input type="checkbox" id="funding-heloc-mode" onchange="markFundingDirty()" />
+              <span>On</span>
+            </label>
+          </div>
+          <div class="account-overview-item editable">
+            <span class="account-overview-label" title="Total HELOC commitment. Risk caps and position sizing percentages are based on this amount.">Notional Amount ($)</span>
+            <input type="number" id="funding-notional" min="0" step="1000" class="account-overview-input" onchange="markFundingDirty()" placeholder="e.g. 50000" />
+          </div>
+          <div class="account-overview-item editable">
+            <span class="account-overview-label" title="Annual HELOC interest rate. Used to compute hurdle rate and carry cost.">HELOC Rate (%)</span>
+            <input type="number" id="funding-rate" min="0" max="30" step="0.1" class="account-overview-input" onchange="markFundingDirty()" />
+          </div>
+          <div class="account-overview-item editable">
+            <span class="account-overview-label" title="Cash actually drawn from HELOC and deposited in Coinbase.">Drawn Amount ($)</span>
+            <input type="number" id="funding-drawn" min="0" step="100" class="account-overview-input" onchange="markFundingDirty()" />
+          </div>
+          <div class="account-overview-item editable">
+            <span class="account-overview-label" title="Pause auto-execution if drawn capital drops by this percentage from peak.">Drawdown Limit (%)</span>
+            <input type="number" id="funding-dd-limit" min="5" max="100" step="1" class="account-overview-input" onchange="markFundingDirty()" />
+          </div>
+          <div class="account-overview-item editable">
+            <span class="account-overview-label" title="How hurdle rate is applied. 'per_trade' = each trade must beat carry cost.">Hurdle Mode</span>
+            <select id="funding-hurdle-mode" class="account-overview-input" onchange="markFundingDirty()" style="width:120px;">
+              <option value="per_trade">Per Trade</option>
+              <option value="off">Off</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost of Capital -->
+      <div class="account-overview-card" style="margin-top: 16px;">
+        <div class="account-overview-header">
+          <span class="account-overview-title">Cost of Capital</span>
+          <div class="account-overview-header-right">
+            <button type="button" class="account-overview-sync-btn" onclick="refreshUsdcYield()" title="Force-refresh USDC yield from Coinbase">Refresh Yield</button>
+          </div>
+        </div>
+        <div class="account-overview-grid">
+          <div class="account-overview-item">
+            <span class="account-overview-label" title="Current USDC earn rate on Coinbase. Auto-refreshed weekly.">USDC Yield</span>
+            <span class="account-overview-value" id="funding-usdc-yield">—</span>
+            <span style="font-size:11px;color:var(--text-dim);margin-top:2px;" id="funding-yield-updated"></span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label" title="HELOC rate minus USDC yield. Cost of idle cash in Coinbase.">Net Idle Cost</span>
+            <span class="account-overview-value" id="funding-net-idle-cost">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label" title="Full HELOC rate. Cost of capital while deployed in a trade (not earning USDC yield).">Deployed Cost</span>
+            <span class="account-overview-value" id="funding-deployed-cost">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label" title="Minimum expected return per trade to beat carry cost. Based on average hold duration.">Hurdle / Trade</span>
+            <span class="account-overview-value" id="funding-hurdle">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label" title="Average hold duration from closed trades. Used for hurdle rate calculation.">Avg Hold</span>
+            <span class="account-overview-value" id="funding-avg-hold">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label" title="Estimated monthly carry cost (deployed at full rate + idle at net rate).">Monthly Carry Est</span>
+            <span class="account-overview-value" id="funding-monthly-carry">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label" title="Currently deployed in open positions vs idle in USDC.">Deployed / Idle</span>
+            <span class="account-overview-value" id="funding-deployed-idle">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label" title="Drawdown of total account value from drawn capital peak.">Drawn Drawdown</span>
+            <span class="account-overview-value" id="funding-drawdown">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance vs Carry -->
+      <div class="account-overview-card" style="margin-top: 16px;">
+        <div class="account-overview-header">
+          <span class="account-overview-title">Performance vs Carry</span>
+          <div class="account-overview-header-right">
+            <div style="display:flex;gap:4px;">
+              <button type="button" class="ao-sharpe-pill active" data-funding-period="30" onclick="setFundingPeriod(30)">30d</button>
+              <button type="button" class="ao-sharpe-pill" data-funding-period="90" onclick="setFundingPeriod(90)">90d</button>
+              <button type="button" class="ao-sharpe-pill" data-funding-period="all" onclick="setFundingPeriod('all')">All</button>
+            </div>
+          </div>
+        </div>
+        <div class="account-overview-grid">
+          <div class="account-overview-item">
+            <span class="account-overview-label">Trading P&L</span>
+            <span class="account-overview-value" id="funding-perf-pnl">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label">Carry Cost</span>
+            <span class="account-overview-value" id="funding-perf-carry">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label">Net After Carry</span>
+            <span class="account-overview-value account-overview-highlight" id="funding-perf-net">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label">Annualized ROC</span>
+            <span class="account-overview-value" id="funding-perf-roc">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label">Trades Closed</span>
+            <span class="account-overview-value" id="funding-perf-trades">—</span>
+          </div>
+          <div class="account-overview-item">
+            <span class="account-overview-label">Period</span>
+            <span class="account-overview-value" id="funding-perf-period">—</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- end #tab-funding -->
+
+  <!-- ============================================================
+       DATA SOURCES TAB
+       ============================================================ -->
+  <div class="tab-panel" id="tab-data-sources">
+    <h3>Data Sources — Live pipeline status &amp; edge contribution</h3>
+    <p id="data-sources-note" class="text-dim" style="font-size: 12px; margin-bottom: 10px;"></p>
+    <table class="table table-dark table-striped" id="data-sources-table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Status</th>
+          <th>Last Updated</th>
+          <th>Feed OK</th>
+          <th>What it Provides</th>
+          <th>Edge Contribution</th>
+          <th>Impact on Quant Gate / Optimizer</th>
+        </tr>
+      </thead>
+      <tbody id="data-sources-body"></tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================
+       OPTIMIZER STATUS TAB
+       ============================================================ -->
+  <div class="tab-panel" id="tab-optimizer">
+    <div class="journal-wrap" style="max-width:1200px;margin:0 auto;">
+      <div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--cyan);border-radius:var(--radius-lg);font-size:12px;color:var(--text-secondary);">
+        Optimizer health at a glance: last cycle results, model calibration, veto accuracy, and roadmap feature status.
+      </div>
+      <div class="schedule-title" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <span>🔧 Optimizer Status</span>
+        <span id="opt-last-updated" style="font-size:13px;color:var(--text-dim);">Updated: —</span>
+        <button type="button" class="schedule-save-btn" onclick="loadOptimizerTab()">🔄 Refresh</button>
+      </div>
+
+      <!-- Last Cycle Summary -->
+      <div style="margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border-dim);border-radius:var(--radius-lg);">
+        <h3 style="margin:0 0 10px;font-size:14px;color:var(--cyan);">Last Cycle</h3>
+        <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;">
+          <div class="perf-metric-card"><div class="perf-metric-label">Timestamp</div><div class="perf-metric-value" id="opt-cycle-ts" style="font-size:13px;">—</div></div>
+          <div class="perf-metric-card"><div class="perf-metric-label">Applied</div><div class="perf-metric-value" id="opt-applied-count">—</div></div>
+          <div class="perf-metric-card"><div class="perf-metric-label">Reverted</div><div class="perf-metric-value" id="opt-reverted-count">—</div></div>
+        </div>
+        <div id="opt-recommendations" style="font-size:13px;color:var(--text-secondary);">—</div>
+      </div>
+
+      <!-- Model Calibration -->
+      <div style="margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid #9c27b0;border-radius:var(--radius-lg);">
+        <h3 style="margin:0 0 10px;font-size:14px;color:#ce93d8;">Model Calibration</h3>
+        <div id="opt-calibration-content" style="font-size:13px;color:var(--text-secondary);">—</div>
+      </div>
+
+      <!-- Veto Health -->
+      <div style="margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid #ff6f00;border-radius:var(--radius-lg);">
+        <h3 style="margin:0 0 10px;font-size:14px;color:#ffb74d;">Veto Health (30d)</h3>
+        <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px;">
+          <div class="perf-metric-card"><div class="perf-metric-label">Total Vetoes</div><div class="perf-metric-value" id="opt-veto-total">—</div></div>
+          <div class="perf-metric-card"><div class="perf-metric-label">Correct</div><div class="perf-metric-value" id="opt-veto-correct">—</div></div>
+          <div class="perf-metric-card"><div class="perf-metric-label">Missed</div><div class="perf-metric-value" id="opt-veto-missed">—</div></div>
+        </div>
+        <div id="opt-veto-by-regime" style="font-size:13px;color:var(--text-secondary);">—</div>
+      </div>
+
+      <!-- Roadmap Features -->
+      <div style="margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid #00796b;border-radius:var(--radius-lg);">
+        <h3 style="margin:0 0 10px;font-size:14px;color:#4db6ac;">Roadmap Features</h3>
+        <div class="history-table-wrap">
+          <table class="history-table" style="width:100%;">
+            <thead><tr><th>Feature</th><th>Stage</th><th>Active</th><th>Passes</th></tr></thead>
+            <tbody id="opt-roadmap-tbody"><tr><td colspan="4" style="text-align:center;color:var(--text-dim);">—</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="footer">
+    <div>Swing Trader v1.0 | CoinGecko · Alternative.me · FRED · Alpha Vantage (CoinPaprika + CoinCap fallback)</div>
+    <div class="footer-warning">⚠ Not financial advice. For research &amp; educational purposes only.</div>
+  </footer>
+
+
+  <!-- ============================================================
+       TRADE JOURNAL MODAL
+       ============================================================ -->
+  <div class="journal-modal" id="journal-modal">
+    <div class="journal-inner">
+
+      <div class="journal-header">
+        <div class="journal-title">📒 Trade Journal</div>
+        <div class="journal-actions">
+          <a class="btn-export" href="/api/journal/export" download>⬇ Export CSV</a>
+          <button class="btn-close-journal" onclick="hideJournal()">✕</button>
+        </div>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="journal-stats" id="journal-stats">
+        <div class="jstat"><div class="jstat-val" id="js-total">—</div><div class="jstat-lbl">Total</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-open" style="color:var(--cyan)">—</div><div class="jstat-lbl">Open</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-wins" style="color:var(--green)">—</div><div class="jstat-lbl">Wins</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-losses" style="color:var(--red)">—</div><div class="jstat-lbl">Losses</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-winrate">—</div><div class="jstat-lbl">Win Rate</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-ai-hit">—</div><div class="jstat-lbl">Target Hit Rate</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-pnl">—</div><div class="jstat-lbl">Total P&amp;L</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-avgwin" style="color:var(--green)">—</div><div class="jstat-lbl">Avg Win %</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-avgloss" style="color:var(--red)">—</div><div class="jstat-lbl">Avg Loss %</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-pf">—</div><div class="jstat-lbl">Profit Factor</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-expect">—</div><div class="jstat-lbl">Expectancy $</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-streak">—</div><div class="jstat-lbl">Streak</div></div>
+        <div class="jstat"><div class="jstat-val" id="js-best" style="color:var(--green)">—</div><div class="jstat-lbl">Best Trade</div></div>
+      </div>
+
+      <div class="journal-body">
+
+        <!-- Log New Position Form -->
+        <div class="journal-section-title">LOG NEW POSITION</div>
+        <div class="trade-form">
+          <input type="hidden" id="f-coin-id" />
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Coin Name</label>
+              <input class="form-input" id="f-coin-name" placeholder="e.g. Bitcoin" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Symbol</label>
+              <input class="form-input" id="f-coin-symbol" placeholder="e.g. BTC" style="text-transform:uppercase" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Signal</label>
+              <select class="form-select" id="f-signal">
+                <option value="BUY">BUY</option>
+                <option value="SELL">SELL</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Entry price ($) — fill when you log the trade</label>
+              <input class="form-input" id="f-entry" type="number" step="any" placeholder="Your fill price" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Quantity (coins) *</label>
+              <div class="qty-with-fill">
+                <input class="form-input" id="f-qty" type="number" step="any" placeholder="0.00" />
+                <button type="button" class="btn-fill-qty" id="btn-fill-qty" onclick="fillQtyFromPositionSizer()" title="Calculate quantity from position sizer (based on available cash)">Fill from sizer</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dynamic Target %</label>
+              <input class="form-input" id="f-target" type="number" step="0.1" placeholder="6.0" value="6.0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dynamic Stop %</label>
+              <input class="form-input" id="f-stop" type="number" step="0.1" placeholder="4.0" value="4.0" />
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <div id="quick-log-levels-comment" class="quick-log-levels-comment" style="font-size:12px;color:var(--text-dim);margin-top:-8px;min-height:18px;"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Timeframe</label>
+              <input class="form-input" id="f-timeframe" placeholder="e.g. 5–10 days" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Signal Confidence</label>
+              <input class="form-input" id="f-confidence" placeholder="e.g. High" readonly style="background:var(--bg-deep)" />
+            </div>
+          </div>
+          <textarea class="form-notes" id="f-notes" placeholder="Hypothesis / notes (auto-filled)..."></textarea>
+          <div class="journal-form-actions">
+            <button class="btn-log-trade" onclick="logPosition()">✚ Log Position</button>
+            <button class="btn-book-coinbase" id="btn-book-coinbase" onclick="bookToCoinbase()" title="Execute TWAP buy on Coinbase, then log position and place SL/TP when complete">📤 Book to Coinbase</button>
+          </div>
+        </div>
+
+        <!-- Trades list -->
+        <div class="journal-section-title">ALL POSITIONS</div>
+        <div class="trades-table-wrap">
+          <table class="trades-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Trade ID</th>
+                <th>Coin</th>
+                <th>Signal</th>
+                <th>Entry</th>
+                <th>Current / Exit</th>
+                <th>Quant Target</th>
+                <th>Quant Stop</th>
+                <th>Unreal. P&L</th>
+                <th>Real. P&L</th>
+                <th title="WIN = closed with profit; LOSS = closed with loss.">Outcome</th>
+                <th title="Did exit price reach the Quant/AI target price? A trade can be a WIN but NO if you closed before target (e.g. trailing stop or manual).">Hit target?</th>
+                <th>Opened</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="trades-tbody">
+              <tr><td colspan="14" class="no-trades">Loading positions...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /journal-body -->
+    </div><!-- /journal-inner -->
+  </div>
+
+  <!-- ============================================================
+       ANALYSIS MODAL (Quant + narrative)
+       ============================================================ -->
+  <div class="modal-overlay" id="ai-modal" onclick="closeModal(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+      <div id="modal-content">
+        <div class="modal-loading">
+          <div class="spinner"></div>
+          <p>Analyzing this trade...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- External JS -->
+  <script src="/static/dashboard.js"></script>
+
+</body>
+</html>

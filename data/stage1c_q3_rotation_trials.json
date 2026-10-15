@@ -1,0 +1,166 @@
+{
+  "generated_at": "2026-07-02T20:34:23.898502+00:00",
+  "git_sha": "4116471",
+  "working_tree_dirty": true,
+  "driver": "stage1c_replay.py --q3-trials",
+  "costs": {
+    "modeled_rt_pct": 0.96,
+    "measured_rt_pct": 2.4
+  },
+  "plain_rotation_incumbent": {
+    "modeled_cost": {
+      "total_net_pct": 1040.4,
+      "max_drawdown_pct": 50.6,
+      "n_leg_flips": 130,
+      "halves": {
+        "train_pre2023": {
+          "net_pct": 423.4,
+          "maxdd_pct": 50.6
+        },
+        "test_2023plus": {
+          "net_pct": 117.9,
+          "maxdd_pct": 26.6
+        }
+      }
+    },
+    "measured_cost": {
+      "total_net_pct": 340.2,
+      "max_drawdown_pct": 61.6,
+      "n_leg_flips": 130,
+      "halves": {
+        "train_pre2023": {
+          "net_pct": 232.4,
+          "maxdd_pct": 61.6
+        },
+        "test_2023plus": {
+          "net_pct": 32.4,
+          "maxdd_pct": 34.7
+        }
+      }
+    }
+  },
+  "H-2026Q3-1_vol_managed": {
+    "result": {
+      "modeled_cost": {
+        "total_net_pct": 924.7,
+        "max_drawdown_pct": 45.6,
+        "n_leg_flips": 130,
+        "halves": {
+          "train_pre2023": {
+            "net_pct": 372.5,
+            "maxdd_pct": 45.6
+          },
+          "test_2023plus": {
+            "net_pct": 116.9,
+            "maxdd_pct": 26.9
+          }
+        }
+      },
+      "measured_cost": {
+        "total_net_pct": 320.6,
+        "max_drawdown_pct": 56.8,
+        "n_leg_flips": 130,
+        "halves": {
+          "train_pre2023": {
+            "net_pct": 217.9,
+            "maxdd_pct": 56.8
+          },
+          "test_2023plus": {
+            "net_pct": 32.3,
+            "maxdd_pct": 34.7
+          }
+        }
+      }
+    },
+    "verdict": "FAIL",
+    "criteria_detail": [
+      "modeled_cost/train_pre2023: DD 45.6 vs cap 38.0 [FAIL]; net 372.5 vs floor 338.7 [ok]",
+      "modeled_cost/test_2023plus: DD 26.9 vs cap 20.0 [FAIL]; net 116.9 vs floor 94.3 [ok]",
+      "measured_cost/train_pre2023: DD 56.8 vs cap 46.2 [FAIL]; net 217.9 vs floor 185.9 [ok]",
+      "measured_cost/test_2023plus: DD 34.7 vs cap 26.0 [FAIL]; net 32.3 vs floor 25.9 [ok]"
+    ]
+  },
+  "H-2026Q3-2_dual_btc_eth": {
+    "result": {
+      "modeled_cost": {
+        "total_net_pct": 1358.9,
+        "max_drawdown_pct": 47.4,
+        "n_leg_flips": 244,
+        "halves": {
+          "train_pre2023": {
+            "net_pct": 696.9,
+            "maxdd_pct": 47.4
+          },
+          "test_2023plus": {
+            "net_pct": 83.1,
+            "maxdd_pct": 24.6
+          }
+        }
+      },
+      "measured_cost": {
+        "total_net_pct": 502.2,
+        "max_drawdown_pct": 53.6,
+        "n_leg_flips": 244,
+        "halves": {
+          "train_pre2023": {
+            "net_pct": 431.1,
+            "maxdd_pct": 53.6
+          },
+          "test_2023plus": {
+            "net_pct": 13.4,
+            "maxdd_pct": 28.3
+          }
+        }
+      }
+    },
+    "verdict": "FAIL",
+    "criteria_detail": [
+      "modeled_cost/train_pre2023: net 696.9 vs 423.4 [ok]; DD 47.4 vs cap 55.7 [ok]",
+      "modeled_cost/test_2023plus: net 83.1 vs 117.9 [FAIL]; DD 24.6 vs cap 29.3 [ok]",
+      "measured_cost/train_pre2023: net 431.1 vs 232.4 [ok]; DD 53.6 vs cap 67.8 [ok]",
+      "measured_cost/test_2023plus: net 13.4 vs 32.4 [FAIL]; DD 28.3 vs cap 38.2 [ok]"
+    ]
+  },
+  "AUDIT-2026Q3-3_robustness": {
+    "grid": {
+      "ma180_band1.0": {
+        "net_pct": 1069.5,
+        "maxdd_pct": 44.7
+      },
+      "ma180_band1.5": {
+        "net_pct": 1171.0,
+        "maxdd_pct": 44.1
+      },
+      "ma180_band2.0": {
+        "net_pct": 1089.4,
+        "maxdd_pct": 44.1
+      },
+      "ma200_band1.0": {
+        "net_pct": 1095.3,
+        "maxdd_pct": 49.8
+      },
+      "ma200_band1.5": {
+        "net_pct": 1040.4,
+        "maxdd_pct": 50.6
+      },
+      "ma200_band2.0": {
+        "net_pct": 976.7,
+        "maxdd_pct": 51.1
+      },
+      "ma220_band1.0": {
+        "net_pct": 1078.3,
+        "maxdd_pct": 48.0
+      },
+      "ma220_band1.5": {
+        "net_pct": 1079.4,
+        "maxdd_pct": 49.3
+      },
+      "ma220_band2.0": {
+        "net_pct": 1099.8,
+        "maxdd_pct": 48.9
+      }
+    },
+    "incumbent_net_pct": 1040.4,
+    "verdict": "PLATEAU"
+  }
+}

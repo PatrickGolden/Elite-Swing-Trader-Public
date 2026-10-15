@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["app.py"],
+      "port": 5000
+    },
+    {
+      "name": "scheduler",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["scheduler_manager.py"]
+    },
+    {
+      "name": "replay",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["historical_replay.py"]
+    }
+  ]
+}

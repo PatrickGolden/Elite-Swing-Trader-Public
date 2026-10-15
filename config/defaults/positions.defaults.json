@@ -1,0 +1,5 @@
+{
+  "_comment": "Empty positions file for disaster recovery. After restoring, manually reconcile with exchange to rebuild open positions.",
+  "open": [],
+  "closed": []
+}

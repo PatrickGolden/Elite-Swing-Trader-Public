@@ -1,0 +1,16 @@
+{
+  "interval": "15min",
+  "count_today": 0,
+  "count_month": 0,
+  "last_refresh": null,
+  "monthly_learning_enabled": true,
+  "learning_run_day": 1,
+  "last_learning_run": null,
+  "weekly_tasks_enabled": true,
+  "weekly_run_day": 6,
+  "weekly_run_hour_et": 3,
+  "last_weekly_run": null,
+  "status_email_enabled": true,
+  "status_email_hours_et": [9, 13, 17],
+  "updated_at": null
+}

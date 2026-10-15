@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>News Sentiment — 50 Articles</title>
+  <style>
+    :root { --bg: #0d1520; --card: #111c2a; --text: #e8f0f8; --dim: #7a9ab8; --link: #00c8e8; --green: #00e676; --red: #ff3a6e; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; }
+    h1 { font-size: 20px; margin-bottom: 8px; }
+    .back { color: var(--link); text-decoration: none; font-size: 14px; margin-bottom: 20px; display: inline-block; }
+    .back:hover { text-decoration: underline; }
+    .meta { color: var(--dim); font-size: 13px; margin-bottom: 20px; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { margin-bottom: 12px; padding: 10px 12px; background: var(--card); border-radius: 6px; border-left: 3px solid var(--dim); }
+    li.bullish { border-left-color: var(--green); }
+    li.bearish { border-left-color: var(--red); }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .score { font-size: 11px; color: var(--dim); margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <a href="/" class="back">← Back to Dashboard</a>
+  <h1>News Sentiment — Articles Referenced</h1>
+  <p class="meta">These are the up to 50 crypto/blockchain news articles used to compute the News Sentiment tile (Alpha Vantage).</p>
+  <ul>
+    {% for a in articles %}
+    <li class="{% if a.score is not none %}{% if a.score > 0.05 %}bullish{% elif a.score < -0.05 %}bearish{% endif %}{% endif %}">
+      <a href="{{ a.url if a.url and (a.url.startswith('http://') or a.url.startswith('https://')) else '#' }}" target="_blank" rel="noopener noreferrer">{{ a.title }}</a>
+      {% if a.score is not none %}<div class="score">Sentiment score: {{ a.score|round(2) }}</div>{% endif %}
+    </li>
+    {% else %}
+    <li>No articles loaded yet. Run a refresh to fetch the latest news sentiment.</li>
+    {% endfor %}
+  </ul>
+</body>
+</html>

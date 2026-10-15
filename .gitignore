@@ -1,0 +1,112 @@
+# API Keys and Environment
+.env
+# Personal identifiers for scripts/publish_public.py's denylist gate — never commit
+.public_denylist
+env_TEMPLATE
+*.pem
+*.key
+
+# Debug artifacts
+debug-546ab8.log
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+.venv-uvtest/
+venv/
+ENV/
+env/
+
+# Logs
+logs/
+*.log
+
+# Batched test output
+test_results/
+test_logs/
+full_system_test_batch_*.txt
+full_system_test_summary.txt
+full_system_run_summary.json
+
+# Runtime state files (written by the app at runtime, backed up to Google Drive)
+# Each has a .defaults.json template tracked in config/defaults/ for disaster recovery.
+positions.json
+positions.json.bak*
+positions.json.before_restore*
+positions.json.before_*
+ai_recommendations_v2.json
+model_performance.json
+model_attribution.json
+cost_log.json
+alert_history.json
+alert_dedup_cache.json
+execution_config.json
+execution_config.json.lock
+execution_config.json.bak.*
+account_config.json
+account_config.json.bak.*
+scheduler_config.json
+scheduler_config.json.bak.*
+live_thresholds.json.bak.*
+brain_config.json
+test_mode_config.json
+live_thresholds.json
+user_alert_settings.json
+mcp_raw_data.json
+data/
+# (journal_sequences.json lives under data/ — TRD/PAP/TST counters)
+
+# Coverage
+.coverage
+htmlcov/
+
+# IDE Files
+.vscode/*
+!.vscode/settings.json
+.idea/
+# Cursor: keep rules + MCP template in git; real mcp.json stays local (secrets)
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/mcp.json.example
+.mcp.json
+
+# Claude Code governance — git is the golden source (see RECOVERY.md).
+# Ignore .claude by default, then re-admit the human-authored governance layer:
+# rules, slash commands, subagents, scheduled-task definitions, launch config.
+# Machine-local and generated content stays out.
+.claude/*
+!.claude/rules/
+!.claude/commands/
+!.claude/agents/
+!.claude/scheduled-tasks/
+!.claude/launch.json
+# Local-only: machine paths, permission grants, 1.1GB of stale agent worktrees.
+.claude/settings.local.json
+.claude/worktrees/
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp / sync artifacts
+.tmp.drivedownload/
+.tmp.driveupload/
+
+# Test reports
+test_report.txt
+.pytest-last.txt
+
+# Build artifacts
+*.egg-info/
+dist/
+build/

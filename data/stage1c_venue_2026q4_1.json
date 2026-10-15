@@ -1,0 +1,187 @@
+{
+  "generated_at": "2026-10-11T19:49:50.570544+00:00",
+  "git_sha": "676c251",
+  "working_tree_dirty": true,
+  "trial_id": "VENUE-2026Q4-1",
+  "driver": "stage1c_replay.py --q4-trials",
+  "registered": {
+    "ts": "2026-09-26T10:26:30.143771+00:00",
+    "kind": "registered",
+    "trial_id": "VENUE-2026Q4-1",
+    "quarter": "2026Q4",
+    "config": {
+      "strategy": "venue_cost_rerun",
+      "rotation": {
+        "ma_days": 200,
+        "band_pct": 1.5,
+        "mom30_gt": 0,
+        "fills": "next_day_close"
+      },
+      "lean_7d_config_hash": "41c90fbe47eb2ab8",
+      "per_side_cost_pct": {
+        "coinbase_base_taker": 1.25,
+        "kraken_t1_taker": 0.85,
+        "kraken_t3_taker": 0.43,
+        "kraken_t3_maker": 0.27
+      },
+      "note": "cost levels exogenous (published schedules, verified 2026-09-26), not fitted"
+    },
+    "config_hash": "4e9d42b9a736fd98",
+    "criteria": "Rotation PASSES at a cost tier iff ALL: (a) full-window compounded net >= HODL BTC's OR return/maxDD >= 1.25x HODL's; (b) >=3/4 rolling WF folds (2022-2025, 30d purge) positive net; (c) bootstrap 5th-pct episode expectancy > 0. Output: cheapest passing tier + capital/volume it requires. Lean-7d reported per tier for context only.",
+    "predicted": "fails at Coinbase base (known); at T3 hinges on return/maxDD since it cannot beat HODL raw return in the 2023+ bull leg",
+    "registered_by": "STRATEGY.md v2.0",
+    "run_not_before": "2026-10-01"
+  },
+  "window": "2018-07-20 -> 2026-10-11",
+  "hodl_btc_full_window": {
+    "total_pct": 1032.66,
+    "cagr_pct": 34.29,
+    "max_dd_pct": -76.67,
+    "calmar": 0.447,
+    "total_over_dd": 13.469
+  },
+  "tiers": {
+    "coinbase_base_taker": {
+      "per_side_cost_pct": 1.25,
+      "requires": "Coinbase Advanced base tier (<$1K 30-day volume) \u2014 today's measured cost",
+      "full_window": {
+        "total_pct": 335.82,
+        "cagr_pct": 19.58,
+        "max_dd_pct": -62.16,
+        "calmar": 0.315,
+        "total_over_dd": 5.402
+      },
+      "passes": false,
+      "criteria": [
+        {
+          "name": "a_return_or_calmar_vs_hodl",
+          "passed": false,
+          "detail": "total 335.82% vs HODL 1032.66% | Calmar 0.315 vs 1.25x HODL 0.559 (total/DD 5.402 vs HODL 13.469)"
+        },
+        {
+          "name": "b_folds_3_of_4",
+          "passed": false,
+          "detail": "2/4 folds positive: 2022: n=0 exp=0.0%, 2023: n=8 exp=7.229%, 2024: n=13 exp=1.937%, 2025: n=12 exp=-1.85%"
+        },
+        {
+          "name": "c_boot5_oos_episode_exp_pos",
+          "passed": false,
+          "detail": "2023+ closed episodes n=34: exp 1.594%, boot 5th-pct -2.157%"
+        }
+      ],
+      "lean7_context_2023plus": {
+        "n": 11,
+        "win_rate_pct": 72.7,
+        "expectancy_pct": 8.595,
+        "profit_factor": 4.24
+      }
+    },
+    "kraken_t1_taker": {
+      "per_side_cost_pct": 0.85,
+      "requires": "Kraken Pro tier 1 ($0+), market orders",
+      "full_window": {
+        "total_pct": 640.11,
+        "cagr_pct": 27.52,
+        "max_dd_pct": -56.23,
+        "calmar": 0.489,
+        "total_over_dd": 11.383
+      },
+      "passes": false,
+      "criteria": [
+        {
+          "name": "a_return_or_calmar_vs_hodl",
+          "passed": false,
+          "detail": "total 640.11% vs HODL 1032.66% | Calmar 0.489 vs 1.25x HODL 0.559 (total/DD 11.383 vs HODL 13.469)"
+        },
+        {
+          "name": "b_folds_3_of_4",
+          "passed": false,
+          "detail": "2/4 folds positive: 2022: n=0 exp=0.0%, 2023: n=8 exp=8.099%, 2024: n=13 exp=2.765%, 2025: n=12 exp=-1.054%"
+        },
+        {
+          "name": "c_boot5_oos_episode_exp_pos",
+          "passed": false,
+          "detail": "2023+ closed episodes n=34: exp 2.418%, boot 5th-pct -1.363%"
+        }
+      ],
+      "lean7_context_2023plus": {
+        "n": 11,
+        "win_rate_pct": 72.7,
+        "expectancy_pct": 9.395,
+        "profit_factor": 4.85
+      }
+    },
+    "kraken_t3_taker": {
+      "per_side_cost_pct": 0.43,
+      "requires": "Kraken Pro tier 3: $10K 30-day volume OR $20K assets on platform; market orders",
+      "full_window": {
+        "total_pct": 1187.61,
+        "cagr_pct": 36.4,
+        "max_dd_pct": -49.94,
+        "calmar": 0.729,
+        "total_over_dd": 23.783
+      },
+      "passes": false,
+      "criteria": [
+        {
+          "name": "a_return_or_calmar_vs_hodl",
+          "passed": true,
+          "detail": "total 1187.61% vs HODL 1032.66% | Calmar 0.729 vs 1.25x HODL 0.559 (total/DD 23.783 vs HODL 13.469)"
+        },
+        {
+          "name": "b_folds_3_of_4",
+          "passed": false,
+          "detail": "2/4 folds positive: 2022: n=0 exp=0.0%, 2023: n=8 exp=9.017%, 2024: n=13 exp=3.637%, 2025: n=12 exp=-0.214%"
+        },
+        {
+          "name": "c_boot5_oos_episode_exp_pos",
+          "passed": false,
+          "detail": "2023+ closed episodes n=34: exp 3.288%, boot 5th-pct -0.525%"
+        }
+      ],
+      "lean7_context_2023plus": {
+        "n": 11,
+        "win_rate_pct": 72.7,
+        "expectancy_pct": 10.235,
+        "profit_factor": 5.63
+      }
+    },
+    "kraken_t3_maker": {
+      "per_side_cost_pct": 0.27,
+      "requires": "Kraken Pro tier 3 AND resting limit (maker) fills \u2014 fill rate unproven",
+      "full_window": {
+        "total_pct": 1489.03,
+        "cagr_pct": 39.92,
+        "max_dd_pct": -47.8,
+        "calmar": 0.835,
+        "total_over_dd": 31.15
+      },
+      "passes": false,
+      "criteria": [
+        {
+          "name": "a_return_or_calmar_vs_hodl",
+          "passed": true,
+          "detail": "total 1489.03% vs HODL 1032.66% | Calmar 0.835 vs 1.25x HODL 0.559 (total/DD 31.15 vs HODL 13.469)"
+        },
+        {
+          "name": "b_folds_3_of_4",
+          "passed": true,
+          "detail": "3/4 folds positive: 2022: n=0 exp=0.0%, 2023: n=8 exp=9.368%, 2024: n=13 exp=3.97%, 2025: n=12 exp=0.107%"
+        },
+        {
+          "name": "c_boot5_oos_episode_exp_pos",
+          "passed": false,
+          "detail": "2023+ closed episodes n=34: exp 3.62%, boot 5th-pct -0.205%"
+        }
+      ],
+      "lean7_context_2023plus": {
+        "n": 11,
+        "win_rate_pct": 72.7,
+        "expectancy_pct": 10.555,
+        "profit_factor": 5.97
+      }
+    }
+  },
+  "cheapest_passing_tier": null,
+  "verdict": "FAIL"
+}

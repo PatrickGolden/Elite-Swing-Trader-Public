@@ -1,0 +1,10 @@
+# Optional: pip install pre-commit && pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: heavy-test-stress-markers
+        name: heavy tests must declare pytest.mark.stress
+        entry: python scripts/check_heavy_test_markers.py
+        language: system
+        pass_filenames: false
+        always_run: true

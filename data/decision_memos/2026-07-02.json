@@ -1,0 +1,73 @@
+{
+  "generated_at": "2026-07-02T21:00:33.006625+00:00",
+  "git_sha": "132d4fc",
+  "guards": {
+    "auto_execution_enabled": false,
+    "weekly_tasks_enabled": false,
+    "last_refresh": "2026-07-02T15:54:00.747757",
+    "refresh_age_h": 1.1,
+    "optimizer_freeze": true,
+    "flags": []
+  },
+  "cohorts": {
+    "rotation": {
+      "open": 0,
+      "closed": 0,
+      "net_expectancy_pct": null,
+      "mde_pct": null
+    },
+    "lean_paper": {
+      "open": 0,
+      "closed": 0,
+      "net_expectancy_pct": null,
+      "mde_pct": null
+    },
+    "note": "cost-honest fills since v1.6c; cohorts empty while risk-off is EXPECTED"
+  },
+  "gate_watch": {
+    "scoreboard": {
+      "window": "2026-06-11 to 2026-07-02",
+      "days_observed": 22,
+      "risk_off_days": 22,
+      "risk_on_days": 0,
+      "btc_return_over_window_pct": -3.52,
+      "avg_fwd7_on_risk_off_days_pct": -1.74,
+      "avg_fwd7_on_risk_on_days_pct": null,
+      "gate_verdict_so_far": "SAVED us from a falling/flat market (staying out was right)",
+      "honesty_note": "Overlapping fwd-7d windows and a single regime stretch: ~1 independent observation. Direction is informative; significance is not claimable."
+    },
+    "suppressed": {
+      "lean_pruned_signals_logged": 3,
+      "distinct_symbols": 3,
+      "note": "instrumentation added 2026-07-02 (v1.6d) \u2014 stream was empty before; forward-return grading becomes possible ~7d after rows accrue, net of measured 2.4% round-trip costs"
+    }
+  },
+  "trials": {
+    "registered_total": 3,
+    "results_total": 11,
+    "last_verdicts": [
+      {
+        "id": "956c8e290b22f328",
+        "verdict": "ARM"
+      },
+      {
+        "id": "41c90fbe47eb2ab8",
+        "verdict": "FAIL"
+      },
+      {
+        "id": "H-2026Q3-1",
+        "verdict": "FAIL"
+      },
+      {
+        "id": "H-2026Q3-2",
+        "verdict": "FAIL"
+      },
+      {
+        "id": "AUDIT-2026Q3-3",
+        "verdict": "PLATEAU"
+      }
+    ],
+    "q3_slots_used": 2,
+    "q3_slots_remaining": 2
+  }
+}

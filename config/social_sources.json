@@ -1,0 +1,94 @@
+{
+  "x_accounts": [
+    {
+      "id": "752dc9320c054e059f6b8950fc9e0c9c",
+      "handle": "bcbacker",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "63484557c7574b8fa56b98f0d51ddd31",
+      "handle": "raoulgmi",
+      "label": "debasement_cycle_expert",
+      "enabled": true
+    },
+    {
+      "id": "2eed236b226942179e3ebe69fc000451",
+      "handle": "bitteljulien",
+      "label": "macro_cycle_expert",
+      "enabled": true
+    },
+    {
+      "id": "df371e398d68470d8d592cf323958857",
+      "handle": "crediblecrypto",
+      "label": "cycle_halving_expert",
+      "enabled": true
+    },
+    {
+      "id": "e9062a81e0fb4fd8aaf3a9bdb82371c6",
+      "handle": "txmctrades",
+      "label": "volume_accum_expert",
+      "enabled": true
+    },
+    {
+      "id": "03cb9549dd8d4a66902a47bbe9765f26",
+      "handle": "rektcapital",
+      "label": "cycle_pattern_expert",
+      "enabled": true
+    },
+    {
+      "id": "c37f4412599c4322bfeb80e3a0963d53",
+      "handle": "cryptodonalt",
+      "label": "high_tf_cycle_expert",
+      "enabled": true
+    },
+    {
+      "id": "a5a3a3ddcec144f39528b410b15f1d71",
+      "handle": "intocryptoverse",
+      "label": "data_cycle_expert",
+      "enabled": true
+    },
+    {
+      "id": "b427cf64c06c4fdf9db8566451a9b070",
+      "handle": "pentosh1",
+      "label": "macro_ta_expert",
+      "enabled": true
+    },
+    {
+      "id": "ec91badb3bca456c89e36713b075635f",
+      "handle": "eleanorterrett",
+      "label": "",
+      "enabled": true
+    }
+  ],
+  "youtube_channels": [
+    {
+      "id": "d33999265ed143b9a86a76fddf05355f",
+      "channel_id": "UCia6oYbLKo8fLOguATpACmA",
+      "name": "BC Backer",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "bca6f632eaa4476bbb4cc0a4159353fc",
+      "channel_id": "UCVFSzL3VuZKP3cN9IXdLOtw",
+      "name": "Raoul Paul",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "edcd6983187849efb513ca789902eb47",
+      "channel_id": "UC4VPa7EOvObpyCRI4YKRQRw",
+      "name": "Paul Barron",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "7d67e42c450844518f637bc5b7078d6c",
+      "channel_id": "UClgJyzwGs-GyaNxUHcLZrkg",
+      "name": "InvestAnswers",
+      "label": "",
+      "enabled": true
+    }
+  ]
+}

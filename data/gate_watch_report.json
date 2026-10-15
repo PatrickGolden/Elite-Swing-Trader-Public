@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-08-08T09:34:39.715993+00:00",
+  "rule": {
+    "ma_days": 200,
+    "band_pct": 1.5,
+    "robustness": "PLATEAU (AUDIT-2026Q3-3)"
+  },
+  "btc_cache_note": "BTC daily cache refreshed (was 37d stale)",
+  "regime_scoreboard": {
+    "window": "2026-06-11 to 2026-08-08",
+    "days_observed": 59,
+    "risk_off_days": 59,
+    "risk_on_days": 0,
+    "btc_return_over_window_pct": 2.2,
+    "avg_fwd7_on_risk_off_days_pct": 0.09,
+    "avg_fwd7_on_risk_on_days_pct": null,
+    "gate_verdict_so_far": "COST us 2.2% of BTC upside so far (watch if this grows)",
+    "honesty_note": "Overlapping fwd-7d windows and a single regime stretch: ~1 independent observation. Direction is informative; significance is not claimable."
+  },
+  "suppressed_signals": {
+    "lean_pruned_signals_logged": 1065,
+    "distinct_symbols": 107,
+    "note": "instrumentation added 2026-07-02 (v1.6d) \u2014 stream was empty before; forward-return grading becomes possible ~7d after rows accrue, net of measured 2.4% round-trip costs"
+  },
+  "gate_discrimination": {
+    "n": 1065,
+    "path_check": {
+      "would_pass": 238,
+      "would_block": 827,
+      "mean_fwd7_allowed_pct": -2.38,
+      "mean_fwd7_blocked_pct": -3.93,
+      "discriminates": true,
+      "by_path": {
+        "default": {
+          "n": 645,
+          "in_allowlist": false,
+          "mean_fwd7_pct": -4.19
+        },
+        "momentum_context": {
+          "n": 128,
+          "in_allowlist": false,
+          "mean_fwd7_pct": -5.05
+        },
+        "early_momentum": {
+          "n": 235,
+          "in_allowlist": true,
+          "mean_fwd7_pct": -2.37
+        },
+        "pullback_in_trend": {
+          "n": 3,
+          "in_allowlist": true,
+          "mean_fwd7_pct": -3.44
+        },
+        "blood_in_the_street": {
+          "n": 53,
+          "in_allowlist": false,
+          "mean_fwd7_pct": 1.27
+        },
+        "dip": {
+          "n": 1,
+          "in_allowlist": false,
+          "mean_fwd7_pct": -0.91
+        }
+      }
+    },
+    "full_shadow_verdict": {
+      "rows_instrumented": 0,
+      "would_allow": 0,
+      "would_block": 0,
+      "mean_fwd7_allowed_pct": null,
+      "mean_fwd7_blocked_pct": null,
+      "note": "path+momentum counterfactual; instrumented 2026-08-08 \u2014 needs ~7d of rows before returns are gradeable"
+    },
+    "honesty_note": "Forward returns here are unadjusted for market beta: the whole window is risk-off, so ALL buckets skew negative. Compare buckets to each other, never to zero."
+  },
+  "kind": "observational \u2014 never changes behavior"
+}

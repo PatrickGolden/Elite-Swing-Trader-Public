@@ -1,0 +1,26 @@
+---
+description: Auto-push after successful verification and commit
+alwaysApply: true
+---
+
+# Default Push Workflow
+
+Use this as the default git workflow for this repository unless the user explicitly says otherwise for a specific task.
+
+- After code changes, run relevant verification (tests/lint/checks).
+- If verification succeeds and a commit is created, push automatically to `origin/<current-branch>`.
+- Treat this as default behavior; do not wait for a separate "push now" instruction.
+
+# Safety Exceptions
+
+- If the user says `no push`, `local only`, or equivalent, skip push.
+- Never force-push unless the user explicitly requests it.
+- Never push when verification fails.
+- Keep standard git safety: no destructive commands, no secret commits.
+
+# Communication
+
+- In final updates, include:
+  - commit hash
+  - branch name
+  - push result

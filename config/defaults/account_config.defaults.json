@@ -1,0 +1,16 @@
+{
+  "total_cash": 0.0,
+  "risk_pct": 2.0,
+  "max_cash_usage_pct": 60.0,
+  "dust_threshold_usd": 1.0,
+  "heloc_mode": false,
+  "heloc_notional": 0.0,
+  "heloc_rate_pct": 8.0,
+  "usdc_yield_pct": 4.1,
+  "usdc_yield_auto_refresh": true,
+  "usdc_yield_last_updated": null,
+  "heloc_drawn": 0.0,
+  "heloc_drawn_peak": 0.0,
+  "max_drawn_drawdown_pct": 30.0,
+  "hurdle_mode": "per_trade"
+}

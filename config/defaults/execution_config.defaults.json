@@ -1,0 +1,7 @@
+{
+  "auto_execution_enabled": false,
+  "auto_execution_exchange": "coinbase",
+  "auto_sync_balance": true,
+  "twap_min_usd": 150.0,
+  "stale_position_rule_enabled": true
+}
